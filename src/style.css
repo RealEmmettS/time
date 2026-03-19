@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #f6f6f6;
+  --color-on-surface: #2d2f2f;
+  --color-outline: #757777;
+  --color-outline-variant: #acadad;
+  --color-accent: #00fc40;
+  --color-accent-dark: #006b15;
+  --color-accent-dim: #005d11;
+
+  --font-headline: "Space Grotesk", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+/* Dot grid background */
+.dot-grid {
+  background-image: radial-gradient(var(--color-outline-variant) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Brutalist card shadow */
+.brutalist-shadow {
+  box-shadow: 6px 6px 0px 0px var(--color-on-surface);
+}
+
+.brutalist-shadow-sm {
+  box-shadow: 4px 4px 0px 0px var(--color-on-surface);
+}
+
+.brutalist-shadow-accent {
+  box-shadow: 4px 4px 0px 0px var(--color-accent);
+}
+
+/* Clock digits — tabular numbers for stable width */
+.clock-digits {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.02em;
+}
+
+/* Sync status pulse animation */
+@keyframes sync-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.sync-pulse {
+  animation: sync-pulse 1.5s ease-in-out infinite;
+}
+
+/* Responsive clock sizing */
+.clock-time {
+  font-size: clamp(3rem, 16vw, 18rem);
+  line-height: 1;
+}
+
+@media (min-width: 768px) {
+  .clock-time {
+    font-size: clamp(5rem, 14vw, 18rem);
+  }
+}
+
+@media (min-width: 1440px) {
+  .clock-time {
+    font-size: clamp(10rem, 16vw, 22rem);
+  }
+}
+
+/* Colon sizing matches digits */
+.clock-colon {
+  font-size: clamp(2rem, 12vw, 14rem);
+  line-height: 1;
+}
+
+@media (min-width: 768px) {
+  .clock-colon {
+    font-size: clamp(4rem, 11vw, 14rem);
+  }
+}
+
+@media (min-width: 1440px) {
+  .clock-colon {
+    font-size: clamp(8rem, 13vw, 18rem);
+  }
+}

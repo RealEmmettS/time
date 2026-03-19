@@ -1,0 +1,19 @@
+{
+  "name": "atomic-time",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A beautiful, responsive atomic clock web app — an alternative to time.gov",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.2",
+    "vite": "^8.0.1"
+  }
+}

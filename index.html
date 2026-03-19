@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ATOMIC TIME</title>
+  <meta name="description" content="A beautiful, responsive atomic clock — synced to PTB atomic clocks. An alternative to time.gov." />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="https://shaughv.s3.us-east-1.amazonaws.com/brandmark/favicon/SHAUGHV-Favicon-Dark.svg" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body class="bg-surface text-on-surface font-body dot-grid h-screen flex flex-col select-none overflow-hidden">
+
+  <!-- Sync Status Pill -->
+  <div class="fixed top-4 right-4 z-50">
+    <div class="flex items-center gap-2 border-2 border-on-surface bg-white px-3 py-1.5 brutalist-shadow-sm">
+      <div id="sync-dot" class="w-2.5 h-2.5 bg-yellow-500 sync-pulse"></div>
+      <span id="sync-text" class="font-headline text-[10px] font-bold tracking-widest uppercase">WAITING</span>
+    </div>
+    <div id="sync-detail" class="font-headline text-[9px] text-outline mt-1 text-right tracking-wider"></div>
+  </div>
+
+  <!-- Main Clock Area -->
+  <main class="flex-1 flex flex-col items-center justify-center px-4 py-8">
+
+    <!-- Clock Container -->
+    <div class="w-full max-w-[95vw] flex flex-col items-center gap-4 md:gap-6">
+
+      <!-- Precision Label -->
+      <div class="font-headline text-[10px] font-bold text-outline tracking-[0.15em] uppercase border-b border-outline pb-1">
+        ATOMIC CLOCK PRECISION TIME
+      </div>
+
+      <!-- Time Display -->
+      <div class="flex items-baseline justify-center clock-digits font-headline font-bold text-on-surface">
+        <span id="clock-hours" class="clock-time">--</span>
+        <span class="clock-colon text-outline mx-[0.5vw]">:</span>
+        <span id="clock-minutes" class="clock-time">--</span>
+        <span class="clock-colon text-outline mx-[0.5vw]">:</span>
+        <span id="clock-seconds" class="clock-time">--</span>
+      </div>
+
+      <!-- Badges Row -->
+      <div class="flex gap-3 items-center">
+        <!-- AM/PM Badge -->
+        <div id="clock-ampm" class="bg-accent text-accent-dark px-3 py-1 font-headline font-bold text-lg md:text-2xl border-2 border-on-surface tracking-wide">
+          --
+        </div>
+        <!-- Timezone Badge -->
+        <div class="bg-white text-on-surface px-3 py-1 font-headline font-bold text-lg md:text-2xl border-2 border-on-surface tracking-wide">
+          <span id="clock-timezone">---</span>
+        </div>
+      </div>
+
+      <!-- Date -->
+      <div id="clock-date" class="font-body text-sm md:text-base text-outline font-medium tracking-wide mt-2">
+        ---
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Bottom Bar -->
+  <footer class="flex items-center justify-between px-4 md:px-8 py-4">
+    <!-- SHAUGHV Logo -->
+    <a href="https://shaughv.com" target="_blank" rel="noopener noreferrer" class="opacity-40 hover:opacity-70 transition-opacity">
+      <img
+        src="https://shaughv.s3.us-east-1.amazonaws.com/brandmark/SHAUGHV-Official.svg"
+        alt="SHAUGHV"
+        class="h-5 md:h-6"
+      />
+    </a>
+
+    <!-- 12/24 Toggle -->
+    <label class="flex items-center gap-3 cursor-pointer group">
+      <span class="font-headline text-[10px] font-bold text-outline tracking-widest uppercase group-hover:text-on-surface">
+        24-HOUR
+      </span>
+      <div class="relative inline-flex items-center">
+        <input
+          type="checkbox"
+          id="toggle-24"
+          class="peer sr-only"
+        />
+        <div class="w-10 h-5 border-2 border-on-surface bg-white peer-checked:bg-accent transition-colors"></div>
+        <div class="absolute left-[3px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-on-surface transition-all peer-checked:left-[21px]"></div>
+      </div>
+    </label>
+  </footer>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
