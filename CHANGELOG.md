@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2026-03-19
+
+### Fixed
+- Fixed ~2 second clock delay caused by CDN/browser caching of time API responses — added `cache: 'no-store'` and cache-busting query parameter to all sync fetches
+
 ## [0.1.1] - 2026-03-19
 
 ### Fixed

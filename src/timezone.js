@@ -159,7 +159,7 @@ export async function resolveTimezoneFromLocation() {
     const url = `https://timeapi.io/api/time/current/coordinate?latitude=${coords.lat}&longitude=${coords.lng}`;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(url, { signal: controller.signal });
+    const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
     clearTimeout(timeout);
 
     if (!res.ok) return null;

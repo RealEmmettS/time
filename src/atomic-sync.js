@@ -113,8 +113,10 @@ export class AtomicClockSync extends EventTarget {
     const timeout = setTimeout(() => controller.abort(), 5000);
 
     try {
-      const response = await fetch(this._endpoint.url, {
+      const bustUrl = `${this._endpoint.url}${this._endpoint.url.includes('?') ? '&' : '?'}_=${Date.now()}`;
+      const response = await fetch(bustUrl, {
         signal: controller.signal,
+        cache: 'no-store',
       });
 
       const t2 = performance.now();
