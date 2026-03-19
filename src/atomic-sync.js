@@ -131,10 +131,13 @@ export class AtomicClockSync extends EventTarget {
         throw new Error('Invalid timestamp from server');
       }
 
+      // High-resolution RTT for sample quality ranking
       const rtt = t2 - t1;
+      // The server generated serverMs at approximately the midpoint of the round trip.
+      // localMidpoint is the client's clock at that same instant.
+      // offset = serverTime - clientTime at the same instant.
       const localMidpoint = (localBefore + localAfter) / 2;
-      const estimatedServerNow = serverMs + rtt / 2;
-      const offset = estimatedServerNow - localMidpoint;
+      const offset = serverMs - localMidpoint;
 
       return { offset, rtt };
     } finally {

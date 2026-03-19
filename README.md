@@ -1,19 +1,38 @@
 # ATOMIC TIME
 
-A beautiful, responsive atomic clock web app — an alternative to [time.gov](https://time.gov).
+A beautiful, brutalist atomic clock web app — a modern alternative to [time.gov](https://time.gov).
 
-Syncs with PTB (Germany) atomic clocks via [iTime.live](https://itime.live) with NTP-style round-trip delay compensation. Auto-detects your timezone and displays a large, readable clock on any device.
+Built by [SHAUGHV](https://shaughv.com) | [QubeTX](https://qubetx.com) | [emmetts.dev](https://emmetts.dev)
 
 ## Features
 
-- Atomic clock sync via iTime.live API (PTB caesium fountain clocks)
-- NTP-style multi-sample minimum-RTT algorithm (~30-50ms accuracy)
-- Auto timezone detection
-- 12/24 hour toggle (persisted to localStorage)
-- Brutalist design aesthetic — zero border radius, hard shadows, dot grid
-- Fully responsive: mobile portrait/landscape, tablet, desktop, TV
-- Re-syncs every 10 minutes + on tab re-focus
-- Live sync status indicator
+- **Atomic clock sync** via iTime.live API (PTB caesium fountain clocks, Germany)
+- **NTP-style accuracy** — multi-sample minimum-RTT algorithm (~30-50ms)
+- **Corrected offset** — compensates for your device's clock drift in real time
+- **Auto timezone detection** — no permissions needed (Intl API with geolocation fallback)
+- **12/24 hour toggle** — persisted to localStorage
+- **Comprehensive sync tooltip** — tap or hover for detailed accuracy info:
+  - 15 RTT tiers, 15 offset tiers, 12 watch-setting guidance tiers
+  - Dynamic, plain-English explanations with real-world analogies
+- **Fully responsive** — mobile portrait (stacked), landscape, tablet, desktop, TV
+- **Brutalist design** — zero border radius, hard shadows, dot grid, Space Grotesk
+- **Re-syncs every 10 minutes** + on tab re-focus
+- **SHAUGHV branding** — favicon + footer logo
+
+## How It Works
+
+Uses the same synchronization algorithm as time.gov (the official U.S. atomic clock):
+
+1. Makes 5 sequential HTTP requests to an atomic-clock-synced server
+2. Records `performance.now()` before and after each request for high-resolution RTT
+3. Selects the sample with the **lowest round-trip time** (least network jitter)
+4. Estimates one-way delay as half the RTT
+5. Computes offset: `serverTime - clientMidpoint`
+6. Applies offset to `Date.now()` for all display updates
+7. Re-syncs every 10 minutes to account for local oscillator drift
+
+**Primary source:** [iTime.live](https://itime.live) — PTB (Germany) atomic clocks
+**Fallback:** [timeapi.io](https://timeapi.io) — NTP-synced server
 
 ## Local Development
 
@@ -26,7 +45,7 @@ npm run dev
 
 ```bash
 npm run build
-npm run preview  # preview production build locally
+npm run preview
 ```
 
 ## Deployment
@@ -40,20 +59,10 @@ Push to GitHub and connect to Vercel — it auto-detects Vite projects.
 - Tailwind CSS v4
 - Space Grotesk + Inter (Google Fonts)
 
-## How It Works
-
-The app uses the same synchronization algorithm as time.gov:
-
-1. Makes 5 parallel HTTP requests to iTime.live's atomic clock API
-2. Records `performance.now()` before and after each request
-3. Selects the sample with the lowest round-trip time (least network jitter)
-4. Estimates one-way delay as half the RTT
-5. Computes offset between server atomic time and local clock
-6. Applies offset to `Date.now()` for all subsequent display updates
-7. Re-syncs every 10 minutes to account for local oscillator drift
-
-Falls back to timeapi.io if iTime.live is unreachable.
-
 ## Changelog
 
 See [CHANGELOG.md](./CHANGELOG.md).
+
+---
+
+A [SHAUGHV](https://shaughv.com) project by [Emmett](https://emmetts.dev) | Powered by [QubeTX](https://qubetx.com)

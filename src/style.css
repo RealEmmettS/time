@@ -28,10 +28,6 @@
   box-shadow: 4px 4px 0px 0px var(--color-on-surface);
 }
 
-.brutalist-shadow-accent {
-  box-shadow: 4px 4px 0px 0px var(--color-accent);
-}
-
 /* Clock digits — tabular numbers for stable width */
 .clock-digits {
   font-variant-numeric: tabular-nums;
@@ -49,38 +45,116 @@
   animation: sync-pulse 1.5s ease-in-out infinite;
 }
 
-/* Responsive clock sizing */
-.clock-time {
-  font-size: clamp(3rem, 16vw, 18rem);
-  line-height: 1;
+/* ── Tooltip visibility ── */
+.sync-tooltip-hidden {
+  display: none;
 }
 
+.sync-tooltip-visible {
+  display: block;
+}
+
+/* Desktop: also show on hover */
+@media (hover: hover) {
+  #sync-container:hover .sync-tooltip-hidden {
+    display: block;
+  }
+}
+
+/* ── Clock layout ── */
+
+/*
+ * NARROW PORTRAIT (<430px): Stacked layout
+ * HH:MM on one line, :SS below — digits as large as possible
+ */
+.clock-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.clock-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.clock-time {
+  font-size: clamp(4rem, 22vw, 8rem);
+  line-height: 1.05;
+}
+
+.clock-colon {
+  font-size: clamp(3rem, 16vw, 6rem);
+  line-height: 1;
+  margin: 0 0.5vw;
+}
+
+/* Hide the wide colon in stacked mode (narrow) */
+.clock-colon-wide {
+  display: none;
+}
+
+/* Seconds row in stacked mode — smaller, acts as a sub-display */
+.clock-seconds-row .clock-time {
+  font-size: clamp(3rem, 18vw, 6rem);
+}
+
+/*
+ * WIDE ENOUGH (>=430px): Single-line layout
+ * HH:MM:SS all on one row
+ */
+@media (min-width: 430px) {
+  .clock-container {
+    flex-direction: row;
+    align-items: baseline;
+  }
+
+  .clock-colon-wide {
+    display: inline;
+  }
+
+  .clock-time {
+    font-size: clamp(3.5rem, 16vw, 18rem);
+    line-height: 1;
+  }
+
+  .clock-colon {
+    font-size: clamp(2.5rem, 12vw, 14rem);
+  }
+
+  .clock-seconds-row .clock-time {
+    font-size: clamp(3.5rem, 16vw, 18rem);
+  }
+}
+
+/* Tablet+ */
 @media (min-width: 768px) {
   .clock-time {
     font-size: clamp(5rem, 14vw, 18rem);
   }
+
+  .clock-colon {
+    font-size: clamp(4rem, 11vw, 14rem);
+  }
+
+  .clock-seconds-row .clock-time {
+    font-size: clamp(5rem, 14vw, 18rem);
+  }
 }
 
+/* Large desktop / TV */
 @media (min-width: 1440px) {
   .clock-time {
     font-size: clamp(10rem, 16vw, 22rem);
   }
-}
 
-/* Colon sizing matches digits */
-.clock-colon {
-  font-size: clamp(2rem, 12vw, 14rem);
-  line-height: 1;
-}
-
-@media (min-width: 768px) {
-  .clock-colon {
-    font-size: clamp(4rem, 11vw, 14rem);
-  }
-}
-
-@media (min-width: 1440px) {
   .clock-colon {
     font-size: clamp(8rem, 13vw, 18rem);
+  }
+
+  .clock-seconds-row .clock-time {
+    font-size: clamp(10rem, 16vw, 22rem);
   }
 }
