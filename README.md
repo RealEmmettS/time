@@ -16,6 +16,10 @@ Built by [SHAUGHV](https://shaughv.com) | [QubeTX](https://qubetx.com) | [emmett
   - Binary search classification with logarithmically distributed thresholds
   - Combined uncertainty scoring for practical watch-setting advice
   - Every description dynamically interpolates your actual measured values
+  - 30+ scientifically fact-checked analogy constants (peer-reviewed sources)
+  - Conflict-free composition: analogy tags + domain categories prevent contradictions across sections
+  - `humanFraction()` algorithm converts ms to natural English fractions ("an eighth of a second")
+- **Live tab title** — browser tab shows the corrected atomic time every second, even from other tabs
 - **Fully responsive** — mobile portrait (stacked HH:MM / SS), landscape, tablet, desktop, TV
 - **Brutalist design** — zero border radius, hard shadows, dot grid, Makira Sans Serif + Space Grotesk
 - **Re-syncs every 10 minutes** + on tab re-focus after 2+ minutes hidden
@@ -43,6 +47,10 @@ This looks like a simple clock. It isn't.
 Behind one HTML page and a handful of vanilla JS modules, ATOMIC TIME packs:
 
 - **A binary search tier classification engine** — 212 tier objects across three axes (RTT, device offset, combined uncertainty) with logarithmically distributed thresholds (100/100/12). Classification runs in O(log n) via right-bisect, resolving in at most 7 comparisons per axis. The data architecture fully separates classification logic from content, so adding a tier is one number and one object — no logic changes.
+
+- **Conflict-free analogy composition** — every tier description is tagged with the real-world analogies it uses (eye blink, heartbeat, gaming latency, etc.) and a domain category (biology, animal, technology, physics, space). All 100 offset tiers carry an alternate description from a different domain. When the tooltip renders, a two-tier conflict resolver ensures no two sections contradict each other (hard conflict: same analogy with different values) or feel redundant (soft conflict: same domain). All analogy values are backed by 30+ verified constants sourced from peer-reviewed literature — no more "an eye blink takes 70ms" (it doesn't).
+
+- **A natural fraction algorithm (`humanFraction`)** — converts raw millisecond uncertainty into the closest natural-sounding English fraction using a denominator whitelist (halves, thirds, quarters, fifths, sixths, eighths, tenths). Prefers simpler fractions via a complexity penalty, falls back to plain numbers outside the fraction-friendly range. Replaces hardcoded approximations like "about a quarter second" for 140ms (which was nearly 2x wrong).
 
 - **An NTP-style multi-sample sync algorithm** — 5 sequential HTTP samples, minimum-RTT selection, midpoint-based offset calculation. The same approach the U.S. government uses at time.gov, implemented in ~100 lines of JS. Cache-busting headers prevent CDN interference. Fallback endpoint switching is automatic.
 
