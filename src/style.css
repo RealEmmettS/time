@@ -1,5 +1,35 @@
 @import "tailwindcss";
 
+/* ── Makira Sans Serif ── */
+@font-face {
+  font-family: "Makira";
+  src: url("/fonts/Makira-Regular.woff2") format("woff2"),
+       url("/fonts/Makira-Regular.woff") format("woff");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Makira";
+  src: url("/fonts/Makira-Medium.woff2") format("woff2"),
+       url("/fonts/Makira-Medium.woff") format("woff");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Makira";
+  src: url("/fonts/Makira-SemiBold.woff2") format("woff2"),
+       url("/fonts/Makira-SemiBold.woff") format("woff");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Makira";
+  src: url("/fonts/Makira-Bold.woff2") format("woff2"),
+       url("/fonts/Makira-Bold.woff") format("woff");
+  font-weight: 700;
+  font-display: swap;
+}
+
 @theme {
   --color-surface: #f6f6f6;
   --color-on-surface: #2d2f2f;
@@ -9,8 +39,9 @@
   --color-accent-dark: #006b15;
   --color-accent-dim: #005d11;
 
-  --font-headline: "Space Grotesk", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, sans-serif;
+  --font-headline: "Makira", system-ui, sans-serif;
+  --font-body: "Makira", system-ui, sans-serif;
+  --font-clock: "Space Grotesk", system-ui, sans-serif;
 }
 
 /* Dot grid background */
@@ -30,6 +61,7 @@
 
 /* Clock digits — tabular numbers for stable width */
 .clock-digits {
+  font-family: var(--font-clock);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
   letter-spacing: -0.02em;

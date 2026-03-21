@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-03-21
+
+### Added
+- Binary search tier classification engine (`src/tier-data.js`)
+  - 100 RTT tiers, 100 offset tiers, 12 watch-setting guidance tiers (212 total)
+  - Logarithmic threshold distribution for precision where it matters most
+  - O(log n) classification via right-bisect (7 comparisons max vs 100 linear)
+- Combined accuracy score for watch guidance: `(RTT / 2) + absolute offset`
+
+### Changed
+- Sync card redesigned: vertically stacked with source, RTT, and offset on separate lines
+- Sync card uses fixed width (185px) for consistent UI regardless of content
+- Sync detail data moved inside the pill (was floating below it)
+- Tooltip rewritten with structured HTML formatting (bold section headings, clean paragraphs)
+- All 212 tier descriptions rewritten: layman-friendly, no em dashes, unique per tier
+- Tooltip container switched from plain text (`<p>` + `whitespace-pre-line`) to structured HTML (`<div>`)
+
 ## [0.1.2] - 2026-03-19
 
 ### Fixed

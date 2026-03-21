@@ -8,7 +8,8 @@ A responsive atomic clock web app (time.gov alternative). Vanilla HTML/CSS/JS wi
 
 ## Development
 
-- `npm run dev` — start Vite dev server
+- `npm install` — install dependencies (first time or after pulling)
+- `npm run dev` — start Vite dev server (opens browser automatically)
 - `npm run build` — production build to `dist/`
 - `npm run preview` — preview production build
 
@@ -26,7 +27,7 @@ Vercel auto-deploys on push to `main` via pre-configured GitHub Actions. No manu
 ## Conventions
 
 - **Tailwind CSS v4** — uses inline `@theme` block in `src/style.css` (no `tailwind.config.js`)
-- **Fonts:** Space Grotesk (headlines/labels), Inter (body) via Google Fonts
+- **Fonts:** Makira Sans Serif (headlines/body, self-hosted WOFF2 from `public/fonts/`), Space Grotesk (clock digits only, Google Fonts). See `@theme` block in `src/style.css` for `--font-headline`, `--font-body`, `--font-clock`.
 - **Design:** Brutalist — zero border radius, hard offset shadows, dot grid bg, all-caps labels
 - **Colors:** surface `#f6f6f6`, text `#2d2f2f`, accent `#00fc40`
 - **Responsive:** `clamp()` typography scales from mobile (<430px stacked layout) to TV (≥1440px)
@@ -48,4 +49,8 @@ Vercel auto-deploys on push to `main` via pre-configured GitHub Actions. No manu
 
 - **`src/main.js`** — Entry point. Instantiates sync + display, starts auto-sync, sets up visibility-change re-sync and timezone confidence check.
 
-- **`src/style.css`** — Tailwind v4 imports + `@theme` block defining the design tokens + custom utilities (`.dot-grid`, `.brutalist-shadow`, `.clock-digits` with `tabular-nums`, `.sync-pulse` animation). Responsive breakpoints at 430px/768px/1440px.
+- **`src/style.css`** — Tailwind v4 imports + `@font-face` declarations for Makira + `@theme` block defining design tokens + custom utilities (`.dot-grid`, `.brutalist-shadow`, `.clock-digits` with `tabular-nums`, `.sync-pulse` animation). Responsive breakpoints at 430px/768px/1440px.
+
+### DOM Coupling
+
+`ClockDisplay.mount()` binds to specific element IDs in `index.html`: `clock-hours`, `clock-minutes`, `clock-seconds`, `clock-ampm`, `clock-timezone`, `clock-date`, `sync-dot`, `sync-text`, `sync-detail`, `sync-tooltip-text`, `sync-btn`, `sync-tooltip`, `toggle-24`. Renaming any of these requires updating both files.

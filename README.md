@@ -11,13 +11,15 @@ Built by [SHAUGHV](https://shaughv.com) | [QubeTX](https://qubetx.com) | [emmett
 - **Corrected offset** — compensates for your device's clock drift in real time
 - **Auto timezone detection** — no permissions needed (Intl API with geolocation fallback)
 - **12/24 hour toggle** — persisted to localStorage
-- **Comprehensive sync tooltip** — tap or hover for detailed accuracy info:
-  - 15 RTT tiers, 15 offset tiers, 12 watch-setting guidance tiers
-  - Dynamic, plain-English explanations with real-world analogies
-- **Fully responsive** — mobile portrait (stacked), landscape, tablet, desktop, TV
-- **Brutalist design** — zero border radius, hard shadows, dot grid, Space Grotesk
-- **Re-syncs every 10 minutes** + on tab re-focus
-- **SHAUGHV branding** — favicon + footer logo
+- **212-tier sync quality analysis** — tap or hover the sync pill for a detailed breakdown:
+  - 100 RTT tiers, 100 device offset tiers, 12 watch-setting guidance tiers
+  - Binary search classification with logarithmically distributed thresholds
+  - Combined uncertainty scoring for practical watch-setting advice
+  - Every description dynamically interpolates your actual measured values
+- **Fully responsive** — mobile portrait (stacked HH:MM / SS), landscape, tablet, desktop, TV
+- **Brutalist design** — zero border radius, hard shadows, dot grid, Makira Sans Serif + Space Grotesk
+- **Re-syncs every 10 minutes** + on tab re-focus after 2+ minutes hidden
+- **SHAUGHV branding** — custom SVG favicon + footer logo
 
 ## How It Works
 
@@ -33,6 +35,22 @@ Uses the same synchronization algorithm as time.gov (the official U.S. atomic cl
 
 **Primary source:** [iTime.live](https://itime.live) — PTB (Germany) atomic clocks
 **Fallback:** [timeapi.io](https://timeapi.io) — NTP-synced server
+
+## Under the Hood
+
+This looks like a simple clock. It isn't.
+
+Behind one HTML page and a handful of vanilla JS modules, ATOMIC TIME packs:
+
+- **A binary search tier classification engine** — 212 tier objects across three axes (RTT, device offset, combined uncertainty) with logarithmically distributed thresholds (100/100/12). Classification runs in O(log n) via right-bisect, resolving in at most 7 comparisons per axis. The data architecture fully separates classification logic from content, so adding a tier is one number and one object — no logic changes.
+
+- **An NTP-style multi-sample sync algorithm** — 5 sequential HTTP samples, minimum-RTT selection, midpoint-based offset calculation. The same approach the U.S. government uses at time.gov, implemented in ~100 lines of JS. Cache-busting headers prevent CDN interference. Fallback endpoint switching is automatic.
+
+- **A combined uncertainty model for watch-setting guidance** — instead of a crude RTT/offset matrix, the watch guidance axis uses a single derived score: `(RTT / 2) + |offset|`. This flattens two dimensions into one, enabling the same binary search as the other axes while giving a physically meaningful "worst-case total error" number.
+
+- **A 20ms render loop** — not `requestAnimationFrame` (which skips background tabs), but `setInterval` at 20ms, matching time.gov's own approach. DOM updates are batched: time updates only when the second changes, metadata only when the minute changes.
+
+- **Zero dependencies beyond Tailwind** — no React, no framework, no state library. Just ES modules, `EventTarget` for pub/sub, and `localStorage` for the 12/24h preference. The entire app is a few kilobytes of JS.
 
 ## Local Development
 
@@ -50,14 +68,14 @@ npm run preview
 
 ## Deployment
 
-Push to GitHub and connect to Vercel — it auto-detects Vite projects.
+Auto-deploys to Vercel on push to `main` via GitHub Actions.
 
 ## Tech Stack
 
 - Vite
 - Vanilla HTML/CSS/JS (no framework)
 - Tailwind CSS v4
-- Space Grotesk + Inter (Google Fonts)
+- Makira Sans Serif (self-hosted, headlines/body) + Space Grotesk (Google Fonts, clock digits)
 
 ## Changelog
 

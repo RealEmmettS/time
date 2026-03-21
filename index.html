@@ -15,20 +15,24 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body class="bg-surface text-on-surface font-body dot-grid h-screen flex flex-col select-none overflow-hidden">
 
   <!-- Sync Status Pill — hover on desktop, tap on mobile -->
   <div id="sync-container" class="fixed top-4 right-4 md:top-5 md:right-6 z-50 flex flex-col items-end">
-    <button id="sync-btn" class="flex items-center gap-2 border-2 border-on-surface bg-white px-3 py-2 brutalist-shadow-sm cursor-help text-left" aria-expanded="false" aria-controls="sync-tooltip">
-      <div id="sync-dot" class="w-2.5 h-2.5 bg-yellow-500 sync-pulse flex-shrink-0"></div>
-      <span id="sync-text" class="font-headline text-xs font-bold tracking-widest uppercase">WAITING</span>
+    <button id="sync-btn" class="flex flex-col gap-1 border-2 border-on-surface bg-white px-3 py-2.5 brutalist-shadow-sm cursor-help text-left w-[185px]" aria-expanded="false" aria-controls="sync-tooltip">
+      <div class="flex items-center gap-2">
+        <div id="sync-dot" class="w-2.5 h-2.5 bg-yellow-500 sync-pulse flex-shrink-0"></div>
+        <span id="sync-text" class="font-headline text-xs font-bold tracking-widest uppercase">WAITING</span>
+      </div>
+      <div id="sync-source" class="font-headline text-[10px] font-semibold text-outline tracking-wide leading-tight"></div>
+      <div id="sync-rtt" class="font-headline text-[10px] font-semibold text-outline tracking-wide leading-tight"></div>
+      <div id="sync-offset" class="font-headline text-[10px] font-semibold text-outline tracking-wide leading-tight"></div>
     </button>
-    <div id="sync-detail" class="font-headline text-[11px] font-semibold text-on-surface mt-1.5 tracking-wide"></div>
     <!-- Tooltip — toggled by JS for tap (mobile) + hover (desktop) -->
     <div id="sync-tooltip" class="sync-tooltip-hidden absolute top-full right-0 mt-3 w-[calc(100vw-2rem)] max-w-80 bg-white border-2 border-on-surface p-4 brutalist-shadow-sm font-body text-xs text-on-surface leading-relaxed z-50 max-h-[70vh] overflow-y-auto">
-      <p id="sync-tooltip-text" class="whitespace-pre-line"></p>
+      <div id="sync-tooltip-text"></div>
     </div>
   </div>
 
