@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-03-21
+
+### Added
+- Verified `ANALOGY` constants block with 30+ scientifically fact-checked values (eye blink, nerve velocity, finger snap, heartbeat, etc.)
+- `humanFraction()` algorithm for natural-language fraction conversion (140ms → "an eighth of a second") using denominator whitelist
+- Analogy tags (`analogies[]`) and domain categories (`domain`) on all 212 tier descriptions
+- Alternate descriptions (`alt`) on all 100 offset tiers for conflict-free composition
+- Two-tier conflict resolution in `_buildTooltip()`: hard conflicts (same analogy) force swap, soft conflicts (same domain) prefer swap
+- Live corrected time in browser tab title (updates every second, respects 12/24h toggle)
+
+### Fixed
+- Eye blink at 70ms (offset tier) — was wrong, minimum is 100ms; replaced with keypress analogy
+- Nerve signal speed — was 0.3ms/cm, corrected to 0.018ms/cm (15x error)
+- Finger snap duration — was 80ms, corrected to 7ms (Georgia Tech 2021 study, 11x error)
+- Finger-to-brain conduction — was 40ms, corrected to 20ms
+- Key press/release duration — was 130ms, corrected to 78ms (Aalto University study)
+- Audio monitoring threshold — was 50ms, corrected to 15ms
+- Lip-sync detection threshold — was 100ms, corrected to 45ms (ITU standard)
+- Fastest conscious reactions — was 100ms, corrected to 120ms
+- "About a quarter second" used for ~140ms values — now uses dynamic `humanFraction()` for accurate fractions
+- Contradictory analogies across tooltip sections (e.g., eye blink = 70ms in offset vs 150ms in RTT) — now impossible via conflict resolution
+
 ## [0.2.1] - 2026-03-21
 
 ### Changed

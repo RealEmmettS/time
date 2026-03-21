@@ -133,6 +133,12 @@ export class ClockDisplay {
         this.els.ampm.textContent = ampm;
       }
     }
+
+    // Update browser tab title with corrected time
+    const timeStr = this.use24Hour
+      ? `${hours}:${minutes}:${seconds}`
+      : `${hours}:${minutes}:${seconds} ${ampm}`;
+    document.title = `${timeStr} \u2014 ATOMIC TIME`;
   }
 
   _renderMeta(date) {
@@ -198,6 +204,35 @@ export class ClockDisplay {
     }
   }
 
+  /**
+   * Two-tier conflict resolution for description selection.
+   * Tier 1 (hard): same analogy tag → must swap to alt.
+   * Tier 2 (soft): same domain → prefer alt if different domain available.
+   */
+  _resolveDescription(tier, usedAnalogies, usedDomains) {
+    const hasHardConflict = (tier.analogies || []).some(a => usedAnalogies.has(a));
+    const hasSoftConflict = usedDomains.has(tier.domain);
+
+    // Hard conflict: MUST swap if alt exists
+    if (hasHardConflict && tier.alt) {
+      (tier.alt.analogies || []).forEach(a => usedAnalogies.add(a));
+      usedDomains.add(tier.alt.domain || tier.domain);
+      return tier.alt.description;
+    }
+
+    // Soft conflict: PREFER swap if alt exists and alt's domain is different
+    if (hasSoftConflict && tier.alt && !usedDomains.has(tier.alt.domain)) {
+      (tier.alt.analogies || []).forEach(a => usedAnalogies.add(a));
+      usedDomains.add(tier.alt.domain);
+      return tier.alt.description;
+    }
+
+    // No conflict: use primary
+    (tier.analogies || []).forEach(a => usedAnalogies.add(a));
+    usedDomains.add(tier.domain);
+    return tier.description;
+  }
+
   _buildTooltip(info, source) {
     const rtt = info.rtt;
     const halfRtt = Math.round(rtt / 2);
@@ -214,6 +249,14 @@ export class ClockDisplay {
     const rttTier = classify(RTT_THRESHOLDS, RTT_TIERS, rtt);
     const offsetTier = classify(OFFSET_THRESHOLDS, OFFSET_TIERS, absOffset);
     const watchTier = classify(WATCH_THRESHOLDS, WATCH_TIERS, uncertainty);
+
+    // Track used analogies/domains for conflict resolution (RTT wins priority)
+    const usedAnalogies = new Set(rttTier.analogies || []);
+    const usedDomains = new Set([rttTier.domain]);
+
+    // Resolve offset and watch descriptions with conflict avoidance
+    const offsetDesc = this._resolveDescription(offsetTier, usedAnalogies, usedDomains);
+    const watchDesc = this._resolveDescription(watchTier, usedAnalogies, usedDomains);
 
     // Source section — explains what the readings mean
     let sourceHtml;
@@ -234,11 +277,11 @@ export class ClockDisplay {
       </div>
       <div class="mb-3">
         <div class="font-bold uppercase tracking-wider text-[10px] mb-1">Clock Offset</div>
-        <p class="leading-relaxed"><strong>${offsetTier.label}.</strong> ${offsetTier.description(offsetCtx)}</p>
+        <p class="leading-relaxed"><strong>${offsetTier.label}.</strong> ${offsetDesc(offsetCtx)}</p>
       </div>
       <div>
         <div class="font-bold uppercase tracking-wider text-[10px] mb-1">For Setting a Watch</div>
-        <p class="leading-relaxed"><strong>${watchTier.label}.</strong> ${watchTier.description(watchCtx)}</p>
+        <p class="leading-relaxed"><strong>${watchTier.label}.</strong> ${watchDesc(watchCtx)}</p>
       </div>
     `.trim();
   }
