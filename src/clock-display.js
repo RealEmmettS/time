@@ -215,12 +215,12 @@ export class ClockDisplay {
     const offsetTier = classify(OFFSET_THRESHOLDS, OFFSET_TIERS, absOffset);
     const watchTier = classify(WATCH_THRESHOLDS, WATCH_TIERS, uncertainty);
 
-    // Source section
+    // Source section — explains what the readings mean
     let sourceHtml;
     if (source === 'PTB Atomic Clock') {
-      sourceHtml = 'PTB (Physikalisch-Technische Bundesanstalt), Germany. Their caesium fountain clock is accurate to within one second per 100 million years. This clock pulls time directly from that source.';
+      sourceHtml = 'This clock synced with the PTB atomic clock in Germany, accurate to one second per 100 million years. The readings below are the raw measurements from that sync. The time shown on screen has already been corrected using these measurements.';
     } else {
-      sourceHtml = 'NTP time server synchronized to atomic clock standards via the Network Time Protocol. The server keeps its clock within milliseconds of international atomic time (UTC).';
+      sourceHtml = 'This clock synced with an NTP time server that tracks international atomic time (UTC) to within milliseconds. The readings below are the raw measurements from that sync. The time shown on screen has already been corrected using these measurements.';
     }
 
     return `

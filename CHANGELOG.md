@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-03-21
+
+### Changed
+- Clarified all 212 sync tooltip tier descriptions to distinguish device clock from on-screen corrected time
+  - RTT tiers (100): "Your clock is accurate to ±Xms" → "The corrected time on screen is accurate to within ±Xms" (with natural variation)
+  - Offset tiers (100): "The displayed time is corrected" → "The time shown on screen has been corrected for this"; added "built-in" qualifier to ambiguous "Your clock" references
+  - Watch tiers (12): "Total uncertainty: Xms" → "The corrected time on screen is accurate to within Xms"
+- Source section in tooltip updated to use "time shown on screen" for consistency
+
 ## [0.2.0] - 2026-03-21
 
 ### Added
