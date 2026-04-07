@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.2] - 2026-04-06
+
+### Changed
+- Precision label updated from "ATOMIC CLOCK PRECISION TIME" to "NIST ATOMIC CLOCK PRECISION"
+
 ## [0.3.1] - 2026-04-06
 
 ### Changed
