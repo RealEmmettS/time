@@ -13,7 +13,6 @@ import {
 } from "./timezone.js";
 import {
   classify,
-  computeWatchScore,
   RTT_THRESHOLDS,
   RTT_TIERS,
   OFFSET_THRESHOLDS,
@@ -431,10 +430,12 @@ export class ClockDisplay {
     // Classify each axis via binary search
     const rttCtx = { rtt, halfRtt };
     const offsetCtx = { offset: info.offset, absOffset, sign, direction };
-    // Use Marzullo uncertainty when available (tighter than RTT/2)
-    const marzulloUncertainty =
-      info.uncertainty > 0 ? info.uncertainty : halfRtt;
-    const uncertainty = marzulloUncertainty + absOffset;
+    // Sync uncertainty = how accurate the corrected time on screen is.
+    // Uses Marzullo-fused uncertainty when available (tighter than naive RTT/2).
+    // Does NOT include absOffset — the offset is the correction we applied,
+    // not an error. A 1700ms offset with 36ms uncertainty is just as accurate
+    // as a 5ms offset with 36ms uncertainty.
+    const uncertainty = info.uncertainty > 0 ? info.uncertainty : halfRtt;
     const watchCtx = {
       rtt,
       halfRtt,
@@ -466,11 +467,11 @@ export class ClockDisplay {
     // Source section — describes the active endpoint
     const sourceDescriptions = {
       "Vercel Edge":
-        "This clock synced with a self-hosted edge server running on Vercel's global network, NTP-synced to within 1\u20132ms of UTC via Stratum 2\u20133 atomic clock infrastructure. Same-origin request for lowest possible latency.",
+        "This clock synced with a self-hosted edge server on Vercel\u2019s global edge network. The server\u2019s clock is NTP-synced to within 1\u20132ms of UTC via Stratum 2\u20133 infrastructure backed by satellite-connected atomic clocks. As a same-origin request, it avoids the DNS and TLS overhead of third-party APIs.",
       "time.now":
-        "This clock synced with the time.now atomic time API, which provides continuously synchronized UTC time with microsecond precision via a global CDN.",
+        "This clock synced with the time.now API, an NTP-synchronized time service delivered via a global CDN. Timestamps are reported with microsecond resolution, though actual accuracy is limited by NTP sync quality (typically within a few milliseconds of UTC).",
       "timeapi.io":
-        "This clock synced with an NTP time server (timeapi.io) that tracks international atomic time (UTC) to within milliseconds.",
+        "This clock synced with timeapi.io, a public NTP-synchronized time server that tracks Coordinated Universal Time (UTC) to within milliseconds.",
     };
     const sourceHtml =
       (sourceDescriptions[endpointName] ||
