@@ -100,12 +100,7 @@
   display: block;
 }
 
-/* Desktop: also show on hover */
-@media (hover: hover) {
-  #sync-container:hover .sync-tooltip-hidden {
-    display: block;
-  }
-}
+/* Desktop hover is handled by JS with a 1.5s delay on leave */
 
 /* ── Watch band in sync pill ── */
 .sync-watch-deco {

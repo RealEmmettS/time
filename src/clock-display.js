@@ -75,25 +75,65 @@ export class ClockDisplay {
       this._updateSyncStatus(e.detail.status);
     });
 
-    // Tooltip: tap to toggle on mobile, hover handled by CSS for desktop
+    // Tooltip: tap to toggle on mobile, hover with 1.5s close delay on desktop
     const syncBtn = document.getElementById("sync-btn");
     const syncTooltip = document.getElementById("sync-tooltip");
-    if (syncBtn && syncTooltip) {
+    const syncContainer = document.getElementById("sync-container");
+    this._hoverTimeout = null;
+
+    const showTooltip = () => {
+      if (this._hoverTimeout) {
+        clearTimeout(this._hoverTimeout);
+        this._hoverTimeout = null;
+      }
+      syncTooltip.classList.add("sync-tooltip-visible");
+      syncTooltip.classList.remove("sync-tooltip-hidden");
+      syncBtn.setAttribute("aria-expanded", "true");
+    };
+
+    const hideTooltip = () => {
+      syncTooltip.classList.remove("sync-tooltip-visible");
+      syncTooltip.classList.add("sync-tooltip-hidden");
+      syncBtn.setAttribute("aria-expanded", "false");
+    };
+
+    const hideTooltipDelayed = () => {
+      if (this._hoverTimeout) clearTimeout(this._hoverTimeout);
+      this._hoverTimeout = setTimeout(hideTooltip, 1500);
+    };
+
+    if (syncBtn && syncTooltip && syncContainer) {
+      // Desktop: hover with 1.5s delay on leave (covers both pill and tooltip)
+      syncContainer.addEventListener("mouseenter", showTooltip);
+      syncContainer.addEventListener("mouseleave", hideTooltipDelayed);
+
+      // Keep tooltip open while hovering/scrolling the tooltip itself
+      syncTooltip.addEventListener("mouseenter", () => {
+        if (this._hoverTimeout) {
+          clearTimeout(this._hoverTimeout);
+          this._hoverTimeout = null;
+        }
+      });
+      syncTooltip.addEventListener("mouseleave", hideTooltipDelayed);
+
+      // Mobile: tap to toggle
       syncBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         const isVisible = syncTooltip.classList.contains(
           "sync-tooltip-visible",
         );
-        syncTooltip.classList.toggle("sync-tooltip-visible", !isVisible);
-        syncTooltip.classList.toggle("sync-tooltip-hidden", isVisible);
-        syncBtn.setAttribute("aria-expanded", String(!isVisible));
+        if (isVisible) {
+          hideTooltip();
+        } else {
+          showTooltip();
+        }
       });
 
       // Close tooltip when tapping anywhere else on the page
-      document.addEventListener("click", () => {
-        syncTooltip.classList.remove("sync-tooltip-visible");
-        syncTooltip.classList.add("sync-tooltip-hidden");
-        syncBtn.setAttribute("aria-expanded", "false");
+      document.addEventListener("click", (e) => {
+        if (!syncContainer.contains(e.target)) {
+          hideTooltip();
+        }
       });
     }
 
@@ -391,7 +431,10 @@ export class ClockDisplay {
     // Classify each axis via binary search
     const rttCtx = { rtt, halfRtt };
     const offsetCtx = { offset: info.offset, absOffset, sign, direction };
-    const uncertainty = computeWatchScore(rtt, absOffset);
+    // Use Marzullo uncertainty when available (tighter than RTT/2)
+    const marzulloUncertainty =
+      info.uncertainty > 0 ? info.uncertainty : halfRtt;
+    const uncertainty = marzulloUncertainty + absOffset;
     const watchCtx = {
       rtt,
       halfRtt,
