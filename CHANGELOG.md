@@ -36,6 +36,9 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 
 - Eliminated ~500-900ms of wasted time per sync cycle caused by the CORS-failing itime.live primary endpoint
+- **Watch score formula corrected** — now uses only Marzullo sync uncertainty instead of `(RTT/2) + absOffset`. The device clock offset is a correction being applied, not an error in the displayed time. A 1700ms offset with 36ms uncertainty now correctly shows "accurate to within 36ms" instead of the misleading "1737ms".
+- **Tooltip hover delay** — 1.5s delay before tooltip hides on mouse exit, and hovering the tooltip itself cancels the timer so users can scroll long tooltip content
+- **Source descriptions improved** — Vercel Edge describes Stratum 2-3 NTP sync; time.now clarifies microsecond resolution vs actual NTP-level accuracy
 
 ## [0.4.0] - 2026-04-06
 
