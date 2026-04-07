@@ -12,17 +12,28 @@ A responsive atomic clock web app (time.gov alternative). Vanilla HTML/CSS/JS wi
 - `npm run dev` — start Vite dev server (opens browser automatically)
 - `npm run build` — production build to `dist/`
 - `npm run preview` — preview production build
+- No test framework — there are no automated tests in this project
+
+## Formatting & CI
+
+Prettier enforces formatting. CI (`.github/workflows/ci.yml`, Node 22) runs on every push to `main` and PR:
+
+1. `npx prettier --check "src/**/*.{js,css}" "api/**/*.js" index.html` — formatting check
+2. `npm run build` — production build verification
+
+Fix formatting locally before committing: `npx prettier --write "src/**/*.{js,css}" "api/**/*.js" index.html`
 
 ## Pre-Commit Requirements
 
 1. **Update CHANGELOG.md** — add entries under the appropriate version heading
 2. **Bump version** in `package.json` to match the changelog
 3. **Run `npm run build`** — verify the production build succeeds
-4. Commit messages: concise, descriptive, prefixed with `fix:` or `feat:`
+4. **Run Prettier** — ensure formatting passes (CI will reject unformatted code)
+5. Commit messages: concise, descriptive, prefixed with `fix:` or `feat:`
 
 ## Deployment
 
-Vercel auto-deploys on push to `main` via pre-configured GitHub Actions. No manual Vercel commands needed — just commit and push.
+Vercel auto-deploys on push to `main` via GitHub integration. No manual Vercel commands needed — just commit and push.
 
 ## Conventions
 
@@ -46,7 +57,9 @@ Vercel auto-deploys on push to `main` via pre-configured GitHub Actions. No manu
 
 - **`src/atomic-sync.js`** — `AtomicClockSync` (extends EventTarget). Marzullo-fused multi-sample sync algorithm. 3-tier endpoint chain: self-hosted Vercel Edge (`/api/time`) → time.now API → timeapi.io. Takes 8 samples per endpoint with 50ms delays, applies IQR outlier filtering, then Marzullo's interval fusion algorithm to find the tightest confidence interval. Connection pre-warming (throwaway fetch) before sampling. All fetches use `cache: 'no-store'` + cache-busting query params. Re-syncs every 10 minutes and on tab re-focus after 2+ minutes hidden.
 
-- **`src/clock-display.js`** — `ClockDisplay`. Renders time via 20ms `setInterval` (not requestAnimationFrame — matches time.gov). Only updates DOM when the second changes. Manages sync status indicator (SYNCED/SYNCING/OFFLINE), 12/24-hour toggle (persisted to localStorage), and a multi-tier tooltip with RTT/offset explanations and watch-setting guidance.
+- **`src/tier-data.js`** — Tier classification engine. 100 RTT tiers + 100 offset tiers + 12 watch guidance tiers = 212 total. `bisectRight()` + `classify()` for O(log n) lookups over logarithmically distributed thresholds. Exports `ANALOGY` constants (30+ peer-reviewed values) that all tier descriptions must reference — never hardcode analogy numbers. Each tier has `analogies[]` tags and `domain` category; offset tiers carry `alt` descriptions. `_buildTooltip()` in clock-display.js runs two-tier conflict resolution (hard: same analogy, soft: same domain) before rendering.
+
+- **`src/clock-display.js`** — `ClockDisplay`. Renders time via 20ms `setInterval` (not requestAnimationFrame — matches time.gov). Only updates DOM when the second changes. Manages sync status indicator (SYNCED/SYNCING/OFFLINE), 12/24-hour toggle (persisted to localStorage), and a multi-tier tooltip with RTT/offset explanations and watch-setting guidance. Uses `@chenglou/pretext` for dynamic fit-to-width clock digit sizing and sync pill width measurement.
 
 - **`src/timezone.js`** — Timezone detection chain: `Intl.DateTimeFormat` primary (instant, no permissions), geolocation + timeapi.io fallback only on low confidence. Exports formatting helpers for time, date, timezone abbreviation, and UTC offset.
 
@@ -54,6 +67,8 @@ Vercel auto-deploys on push to `main` via pre-configured GitHub Actions. No manu
 
 - **`src/style.css`** — Tailwind v4 imports + `@font-face` declarations for Makira + `@theme` block defining design tokens + custom utilities (`.dot-grid`, `.brutalist-shadow`, `.clock-digits` with `tabular-nums`, `.sync-pulse` animation). Responsive breakpoints at 430px/768px/1440px.
 
-### DOM Coupling
+### Key Gotchas
 
-`ClockDisplay.mount()` binds to specific element IDs in `index.html`: `clock-hours`, `clock-minutes`, `clock-seconds`, `clock-ampm`, `clock-timezone`, `clock-date`, `sync-dot`, `sync-text`, `sync-detail`, `sync-tooltip-text`, `sync-btn`, `sync-tooltip`, `toggle-24`. Renaming any of these requires updating both files.
+- **DOM coupling:** `ClockDisplay.mount()` binds to specific element IDs in `index.html`: `clock-hours`, `clock-minutes`, `clock-seconds`, `clock-ampm`, `clock-timezone`, `clock-date`, `sync-dot`, `sync-text`, `sync-detail`, `sync-tooltip-text`, `sync-btn`, `sync-tooltip`, `toggle-24`. Renaming any of these requires updating both files.
+- **Pretext + Vite:** `@chenglou/pretext` ships raw TypeScript, so `vite.config.js` has `optimizeDeps.include: ["@chenglou/pretext"]` to force pre-bundling. Removing this will break dev server.
+- **Analogy accuracy:** All tier descriptions in `tier-data.js` must use the exported `ANALOGY` constants, never raw numbers. Previous versions had factual errors (e.g., eye blink at 70ms instead of 150ms) that were systematically corrected.
