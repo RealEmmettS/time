@@ -1,3 +1,5 @@
+// Copyright QubeTX — tikset.com
+
 /**
  * Clock display — renders atomic-corrected time to the DOM.
  * Uses setInterval at 20ms (same approach as time.gov) for reliable second ticking.

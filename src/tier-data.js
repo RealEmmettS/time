@@ -1,3 +1,5 @@
+// Copyright QubeTX — tikset.com
+
 /**
  * Tier classification engine for sync quality.
  * Binary search (right-bisect) over sorted threshold arrays.

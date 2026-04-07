@@ -1,3 +1,5 @@
+// Copyright QubeTX — tikset.com
+
 /**
  * AtomicClockSync — Synchronizes browser clock with atomic time via HTTPS APIs.
  *

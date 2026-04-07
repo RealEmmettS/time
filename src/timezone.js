@@ -1,3 +1,5 @@
+// Copyright QubeTX — tikset.com
+
 /**
  * Timezone detection and formatting utilities.
  *

@@ -1,3 +1,5 @@
+// Copyright QubeTX — tikset.com
+
 import "./style.css";
 import { AtomicClockSync } from "./atomic-sync.js";
 import { ClockDisplay } from "./clock-display.js";
