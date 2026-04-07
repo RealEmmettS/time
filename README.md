@@ -1,6 +1,6 @@
 # ATOMIC TIME
 
-A beautiful, brutalist atomic clock web app — a modern alternative to [time.gov](https://time.gov).
+A beautiful, brutalist atomic clock web app — a modern alternative to [time.gov](https://time.gov). Hosted at [tikset.com](https://tikset.com).
 
 Built by [SHAUGHV](https://shaughv.com) | [QubeTX](https://qubetx.com) | [emmetts.dev](https://emmetts.dev)
 
