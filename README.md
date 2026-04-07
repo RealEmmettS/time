@@ -6,8 +6,8 @@ Built by [SHAUGHV](https://shaughv.com) | [QubeTX](https://qubetx.com) | [emmett
 
 ## Features
 
-- **Atomic clock sync** via iTime.live API (PTB caesium fountain clocks, Germany)
-- **NTP-style accuracy** — multi-sample minimum-RTT algorithm (~30-50ms)
+- **Atomic clock sync** via self-hosted Vercel Edge Function (NTP-synced, Stratum 2-3) with fallbacks to time.now and timeapi.io
+- **Marzullo-fused accuracy** — 8-sample IQR-filtered interval fusion algorithm (~3-30ms uncertainty)
 - **Corrected offset** — compensates for your device's clock drift in real time
 - **Auto timezone detection** — no permissions needed (Intl API with geolocation fallback)
 - **12/24 hour toggle** — persisted to localStorage
@@ -29,18 +29,21 @@ Built by [SHAUGHV](https://shaughv.com) | [QubeTX](https://qubetx.com) | [emmett
 
 ## How It Works
 
-Uses the same synchronization algorithm as time.gov (the official U.S. atomic clock):
+Uses a Marzullo-fused multi-sample algorithm (same family as NTP's intersection algorithm):
 
-1. Makes 5 sequential HTTP requests to an atomic-clock-synced server
-2. Records `performance.now()` before and after each request for high-resolution RTT
-3. Selects the sample with the **lowest round-trip time** (least network jitter)
-4. Estimates one-way delay as half the RTT
-5. Computes offset: `serverTime - clientMidpoint`
-6. Applies offset to `Date.now()` for all display updates
-7. Re-syncs every 10 minutes to account for local oscillator drift
+1. Warms the connection with a throwaway fetch (establishes DNS + TCP + TLS)
+2. Collects 8 samples at 50ms intervals on the warm connection
+3. Records `performance.now()` before and after each request for high-resolution RTT
+4. Applies IQR outlier filtering to remove statistical anomalies
+5. Builds confidence intervals `[offset - RTT/2, offset + RTT/2]` for each sample
+6. Runs Marzullo's algorithm to find the tightest interval consistent with the most samples
+7. Uses the midpoint of the densest overlap as the offset estimate (2-5x tighter than min-RTT)
+8. Applies offset to `Date.now()` for all display updates
+9. Re-syncs every 10 minutes to account for local oscillator drift
 
-**Primary source:** [iTime.live](https://itime.live) — PTB (Germany) atomic clocks
-**Fallback:** [timeapi.io](https://timeapi.io) — NTP-synced server
+**Primary:** Self-hosted [Vercel Edge Function](/api/time) — NTP-synced, Stratum 2-3, ~5-20ms RTT
+**Fallback 1:** [time.now](https://time.now/developer) — Atomic Time API, BunnyCDN, ~63ms RTT
+**Fallback 2:** [timeapi.io](https://timeapi.io) — NTP-synced server, ~146ms RTT
 
 ## Under the Hood
 
@@ -54,7 +57,7 @@ Behind one HTML page and a handful of vanilla JS modules, ATOMIC TIME packs:
 
 - **A natural fraction algorithm (`humanFraction`)** — converts raw millisecond uncertainty into the closest natural-sounding English fraction using a denominator whitelist (halves, thirds, quarters, fifths, sixths, eighths, tenths). Prefers simpler fractions via a complexity penalty, falls back to plain numbers outside the fraction-friendly range. Replaces hardcoded approximations like "about a quarter second" for 140ms (which was nearly 2x wrong).
 
-- **An NTP-style multi-sample sync algorithm** — 5 sequential HTTP samples, minimum-RTT selection, midpoint-based offset calculation. The same approach the U.S. government uses at time.gov, implemented in ~100 lines of JS. Cache-busting headers prevent CDN interference. Fallback endpoint switching is automatic.
+- **A Marzullo-fused sync algorithm** — 8 samples per endpoint with connection pre-warming, IQR outlier filtering, and Marzullo's interval fusion algorithm (the same family used by NTP). Each sample produces a confidence interval; the sweep-line algorithm finds the densest overlap region across all samples, yielding 2-5x tighter offset estimates than naive minimum-RTT selection. 3-tier endpoint fallback: self-hosted Vercel Edge (same-origin, ~5-20ms RTT) → time.now API (BunnyCDN, ~63ms) → timeapi.io (~146ms). Cache-busting headers prevent CDN interference.
 
 - **A combined uncertainty model for watch-setting guidance** — instead of a crude RTT/offset matrix, the watch guidance axis uses a single derived score: `(RTT / 2) + |offset|`. This flattens two dimensions into one, enabling the same binary search as the other axes while giving a physically meaningful "worst-case total error" number.
 
@@ -85,9 +88,11 @@ npm run build
 npm run preview
 ```
 
-## Deployment
+## CI & Deployment
 
-Auto-deploys to Vercel on push to `main` via GitHub Actions.
+**CI:** GitHub Actions runs Prettier formatting checks and production build verification on every push to `main` and PR.
+
+**Deployment:** Auto-deploys to Vercel on push to `main` via Vercel's GitHub integration.
 
 ## Tech Stack
 

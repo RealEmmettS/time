@@ -42,7 +42,9 @@ Vercel auto-deploys on push to `main` via pre-configured GitHub Actions. No manu
 
 ### Modules
 
-- **`src/atomic-sync.js`** — `AtomicClockSync` (extends EventTarget). Multi-sample minimum-RTT sync algorithm (same as time.gov/NTP). Takes 5 samples from iTime.live (PTB atomic clocks, Germany), falls back to timeapi.io. Calculates `offset = serverTime - clientMidpoint` using the lowest-RTT sample. All fetches use `cache: 'no-store'` + cache-busting query params to prevent CDN from serving stale timestamps. Re-syncs every 10 minutes and on tab re-focus after 2+ minutes hidden.
+- **`api/time.js`** — Vercel Edge Function. Self-hosted time endpoint returning `Date.now()` as JSON. Runs on Vercel's global edge network (<1ms cold start). NTP-synced to ~1-2ms of UTC via Stratum 2-3 infrastructure.
+
+- **`src/atomic-sync.js`** — `AtomicClockSync` (extends EventTarget). Marzullo-fused multi-sample sync algorithm. 3-tier endpoint chain: self-hosted Vercel Edge (`/api/time`) → time.now API → timeapi.io. Takes 8 samples per endpoint with 50ms delays, applies IQR outlier filtering, then Marzullo's interval fusion algorithm to find the tightest confidence interval. Connection pre-warming (throwaway fetch) before sampling. All fetches use `cache: 'no-store'` + cache-busting query params. Re-syncs every 10 minutes and on tab re-focus after 2+ minutes hidden.
 
 - **`src/clock-display.js`** — `ClockDisplay`. Renders time via 20ms `setInterval` (not requestAnimationFrame — matches time.gov). Only updates DOM when the second changes. Manages sync status indicator (SYNCED/SYNCING/OFFLINE), 12/24-hour toggle (persisted to localStorage), and a multi-tier tooltip with RTT/offset explanations and watch-setting guidance.
 

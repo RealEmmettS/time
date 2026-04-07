@@ -214,17 +214,14 @@ export class ClockDisplay {
         dot.classList.add("bg-green-500");
         text.textContent = "SYNCED";
         const info = this.sync.getStatus();
-        const source = info.endpoint.includes("itime")
-          ? "PTB Atomic Clock"
-          : "NTP Server";
+        const source = info.endpoint?.label || "Time Server";
         if (this.els.statusSource) this.els.statusSource.textContent = source;
         if (this.els.statusRtt)
           this.els.statusRtt.textContent = `${info.rtt}ms RTT`;
         if (this.els.statusOffset)
           this.els.statusOffset.textContent = `${info.offset > 0 ? "+" : ""}${info.offset}ms offset`;
         if (this.els.statusTooltip) {
-          // Safe: tooltip content is generated from internal tier data, not user input
-          this.els.statusTooltip.innerHTML = this._buildTooltip(info, source);
+          this.els.statusTooltip.innerHTML = this._buildTooltip(info);
         }
         break;
       }
@@ -382,12 +379,14 @@ export class ClockDisplay {
     return tier.description;
   }
 
-  _buildTooltip(info, source) {
+  _buildTooltip(info) {
     const rtt = info.rtt;
     const halfRtt = Math.round(rtt / 2);
     const absOffset = Math.abs(info.offset);
     const sign = info.offset > 0 ? "+" : "";
     const direction = info.offset > 0 ? "behind" : "ahead of";
+    const endpointName = info.endpoint?.name || "unknown";
+    const endpointLabel = info.endpoint?.label || "Time Server";
 
     // Classify each axis via binary search
     const rttCtx = { rtt, halfRtt };
@@ -421,24 +420,36 @@ export class ClockDisplay {
       usedDomains,
     );
 
-    // Source section — explains what the readings mean
-    let sourceHtml;
-    if (source === "PTB Atomic Clock") {
-      sourceHtml =
-        "This clock synced with the PTB atomic clock in Germany, accurate to one second per 100 million years. The readings below are the raw measurements from that sync. The time shown on screen has already been corrected using these measurements.";
-    } else {
-      sourceHtml =
-        "This clock synced with an NTP time server that tracks international atomic time (UTC) to within milliseconds. The readings below are the raw measurements from that sync. The time shown on screen has already been corrected using these measurements.";
-    }
+    // Source section — describes the active endpoint
+    const sourceDescriptions = {
+      "Vercel Edge":
+        "This clock synced with a self-hosted edge server running on Vercel's global network, NTP-synced to within 1\u20132ms of UTC via Stratum 2\u20133 atomic clock infrastructure. Same-origin request for lowest possible latency.",
+      "time.now":
+        "This clock synced with the time.now atomic time API, which provides continuously synchronized UTC time with microsecond precision via a global CDN.",
+      "timeapi.io":
+        "This clock synced with an NTP time server (timeapi.io) that tracks international atomic time (UTC) to within milliseconds.",
+    };
+    const sourceHtml =
+      (sourceDescriptions[endpointName] ||
+        "This clock synced with a time server that tracks UTC.") +
+      " The readings below are the raw measurements from that sync. The time shown on screen has already been corrected using these measurements.";
+
+    // Marzullo uncertainty display (if available)
+    const uncertaintyHtml =
+      info.uncertainty > 0
+        ? ` Marzullo interval fusion across multiple samples narrowed the uncertainty to \u00b1${Math.round(info.uncertainty * 100) / 100}ms.`
+        : "";
 
     return `
       <div class="mb-3">
         <div class="font-bold uppercase tracking-wider text-[10px] mb-1">Source</div>
         <p class="leading-relaxed">${sourceHtml}</p>
+        <p class="mt-1 text-[10px] opacity-60 uppercase tracking-wider">Active: ${endpointLabel}</p>
       </div>
       <div class="mb-3">
         <div class="font-bold uppercase tracking-wider text-[10px] mb-1">Round-Trip Time</div>
-        <p class="leading-relaxed"><strong>${rttTier.label}.</strong> ${rttTier.description(rttCtx)}</p>
+        <p class="leading-relaxed"><strong>${rttTier.label}.</strong> ${rttTier.description(rttCtx)}${uncertaintyHtml}</p>
+        <p class="mt-1"><a href="https://speedqx.com" target="_blank" rel="noopener noreferrer" class="underline opacity-60 hover:opacity-100 text-[10px] uppercase tracking-wider">Test your connection speed \u2192</a></p>
       </div>
       <div class="mb-3">
         <div class="font-bold uppercase tracking-wider text-[10px] mb-1">Clock Offset</div>

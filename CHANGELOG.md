@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-04-07
+
+### Added
+
+- **Self-hosted Vercel Edge Function time API** (`/api/time`) — runs on Vercel's global edge network with <1ms cold start and ~5-20ms RTT. NTP-synced to within 1-2ms of UTC via Stratum 2-3 infrastructure. Eliminates all third-party API dependency for primary sync.
+- **Marzullo's algorithm for interval fusion** — the same algorithm family used by NTP. Builds confidence intervals (`[offset - RTT/2, offset + RTT/2]`) from all samples, then finds the maximum-overlap intersection via sweep-line. Returns the midpoint (tighter offset estimate) and radius (tighter uncertainty bound). Yields 2-5x tighter bounds than naive minimum-RTT selection.
+- **IQR-based outlier filtering** — removes statistical outliers before Marzullo fusion using interquartile range (Q3 + 1.5*IQR upper fence). Preserves at least 2 samples even under aggressive filtering.
+- **Connection pre-warming** — throwaway fetch before sample collection establishes DNS + TCP + TLS so all measurement samples run on a warm connection. Drops first-sample RTT from ~467ms (cold) to ~63-146ms (warm) on third-party endpoints.
+- **3-tier endpoint fallback chain** with automatic failover:
+  1. Self-hosted Vercel Edge (same-origin, ~5-20ms RTT)
+  2. [time.now](https://time.now/developer) Atomic Time API (BunnyCDN, ~63ms RTT, microsecond precision)
+  3. [timeapi.io](https://timeapi.io) NTP server (~146ms RTT, proven reliable)
+- **Active endpoint source indicator** in sync tooltip — shows which API is currently being used (e.g., "Vercel Edge (NTP-synced)") and whether it's the primary or a fallback
+- **Speed test link** — [speedqx.com](https://speedqx.com) link in the Round-Trip Time tooltip section so users can test their connection speed
+- **Marzullo uncertainty display** — tooltip shows the interval-fusion-tightened uncertainty (e.g., "narrowed the uncertainty to +/-12ms")
+- **GitHub Actions CI workflow** (`.github/workflows/ci.yml`) — runs on pushes to `main` and PRs: Prettier formatting check, production build verification. Ensures code quality before Vercel auto-deploys.
+- **Prettier** added as dev dependency for consistent code formatting
+
+### Changed
+
+- **Sync algorithm upgraded from minimum-RTT to Marzullo fusion** — fuses information from ALL good samples instead of discarding everything except the single best one
+- **Default sample count increased from 5 to 8** — more samples for better statistical coverage
+- **Inter-sample delay reduced from 200ms to 50ms** — total sync time drops from ~2.5s to ~0.5s
+- **Abort timeout reduced from 5s to 3s** — samples with 3s+ RTT are useless for accuracy
+- **Confidence thresholds updated** — adjusted for the lower RTTs achievable with edge functions (<50ms = high, <150ms = medium, <300ms = fair)
+
+### Removed
+
+- **itime.live endpoint** — verified via curl that it lacks CORS headers (`Access-Control-Allow-Origin`), meaning it was silently failing from browsers on every sync attempt and falling back to timeapi.io after wasting 500-900ms. Confirmed by Perplexity deep research.
+- **PTB Atomic Clock source label** — replaced with accurate endpoint-specific labels
+
+### Fixed
+
+- Eliminated ~500-900ms of wasted time per sync cycle caused by the CORS-failing itime.live primary endpoint
+
 ## [0.4.0] - 2026-04-06
 
 ### Added
