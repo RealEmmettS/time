@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2026-04-06
+
+### Changed
+- Replaced favicon with detailed wristwatch SVG icon (green watch face with hour numbers and hands)
+
 ## [0.3.0] - 2026-03-21
 
 ### Added
