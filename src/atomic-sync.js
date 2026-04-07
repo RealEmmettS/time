@@ -10,12 +10,12 @@
 
 const ENDPOINTS = {
   primary: {
-    url: 'https://itime.live/api/time',
+    url: "https://itime.live/api/time",
     parseTimestamp: (data) => data.timestamp, // ms since epoch
   },
   fallback: {
-    url: 'https://timeapi.io/api/time/current/zone?timeZone=UTC',
-    parseTimestamp: (data) => new Date(data.dateTime + 'Z').getTime(),
+    url: "https://timeapi.io/api/time/current/zone?timeZone=UTC",
+    parseTimestamp: (data) => new Date(data.dateTime + "Z").getTime(),
   },
 };
 
@@ -25,7 +25,7 @@ export class AtomicClockSync extends EventTarget {
     this.offset = 0;
     this.lastSync = 0;
     this.lastRtt = 0;
-    this.status = 'idle'; // idle | syncing | synced | error
+    this.status = "idle"; // idle | syncing | synced | error
     this._timer = null;
     this._endpoint = ENDPOINTS.primary;
   }
@@ -36,7 +36,7 @@ export class AtomicClockSync extends EventTarget {
    * @returns {Promise<{offset: number, rtt: number, confidence: string}>}
    */
   async sync(samples = 5) {
-    this._setStatus('syncing');
+    this._setStatus("syncing");
     const results = [];
 
     // Try each endpoint in order
@@ -51,7 +51,10 @@ export class AtomicClockSync extends EventTarget {
           const result = await this._sample();
           results.push(result);
         } catch (e) {
-          console.warn(`Sync sample ${i + 1} failed (${endpoint.url}):`, e.message);
+          console.warn(
+            `Sync sample ${i + 1} failed (${endpoint.url}):`,
+            e.message,
+          );
           // If first sample fails, this endpoint is likely down — try next
           if (i === 0) break;
         }
@@ -69,8 +72,8 @@ export class AtomicClockSync extends EventTarget {
     }
 
     if (results.length === 0) {
-      this._setStatus('error');
-      throw new Error('All sync samples failed');
+      this._setStatus("error");
+      throw new Error("All sync samples failed");
     }
 
     // Select minimum-RTT sample (least affected by network jitter)
@@ -83,12 +86,12 @@ export class AtomicClockSync extends EventTarget {
 
     // Confidence assessment based on RTT
     let confidence;
-    if (best.rtt < 100) confidence = 'high';
-    else if (best.rtt < 300) confidence = 'medium';
-    else if (best.rtt < 500) confidence = 'fair';
-    else confidence = 'low';
+    if (best.rtt < 100) confidence = "high";
+    else if (best.rtt < 300) confidence = "medium";
+    else if (best.rtt < 500) confidence = "fair";
+    else confidence = "low";
 
-    this._setStatus('synced');
+    this._setStatus("synced");
 
     const syncResult = {
       offset: Math.round(best.offset * 100) / 100,
@@ -99,7 +102,7 @@ export class AtomicClockSync extends EventTarget {
     };
 
     console.log(
-      `[AtomicSync] Synced: offset=${syncResult.offset}ms, RTT=${syncResult.rtt}ms, confidence=${confidence}, endpoint=${this._endpoint.url}`
+      `[AtomicSync] Synced: offset=${syncResult.offset}ms, RTT=${syncResult.rtt}ms, confidence=${confidence}, endpoint=${this._endpoint.url}`,
     );
 
     return syncResult;
@@ -113,10 +116,10 @@ export class AtomicClockSync extends EventTarget {
     const timeout = setTimeout(() => controller.abort(), 5000);
 
     try {
-      const bustUrl = `${this._endpoint.url}${this._endpoint.url.includes('?') ? '&' : '?'}_=${Date.now()}`;
+      const bustUrl = `${this._endpoint.url}${this._endpoint.url.includes("?") ? "&" : "?"}_=${Date.now()}`;
       const response = await fetch(bustUrl, {
         signal: controller.signal,
-        cache: 'no-store',
+        cache: "no-store",
       });
 
       const t2 = performance.now();
@@ -130,7 +133,7 @@ export class AtomicClockSync extends EventTarget {
       const serverMs = this._endpoint.parseTimestamp(data);
 
       if (!serverMs || isNaN(serverMs)) {
-        throw new Error('Invalid timestamp from server');
+        throw new Error("Invalid timestamp from server");
       }
 
       // High-resolution RTT for sample quality ranking
@@ -187,6 +190,6 @@ export class AtomicClockSync extends EventTarget {
 
   _setStatus(status) {
     this.status = status;
-    this.dispatchEvent(new CustomEvent('statuschange', { detail: { status } }));
+    this.dispatchEvent(new CustomEvent("statuschange", { detail: { status } }));
   }
 }

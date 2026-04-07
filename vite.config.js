@@ -1,11 +1,14 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from "vite";
 
 export default defineConfig({
-  root: '.',
+  root: ".",
   build: {
-    outDir: 'dist',
+    outDir: "dist",
   },
   server: {
     open: true,
+  },
+  optimizeDeps: {
+    include: ["@chenglou/pretext"],
   },
 });

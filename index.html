@@ -1,107 +1,180 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#f6f6f6" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <title>ATOMIC TIME</title>
-  <meta name="description" content="ATOMIC TIME by SHAUGHV — a beautiful, responsive atomic clock synced to PTB atomic clocks. A modern alternative to time.gov. Built by QubeTX." />
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f6f6f6" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>ATOMIC TIME</title>
+    <meta
+      name="description"
+      content="ATOMIC TIME by SHAUGHV — a beautiful, responsive atomic clock synced to PTB atomic clocks. A modern alternative to time.gov. Built by QubeTX."
+    />
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-</head>
-<body class="bg-surface text-on-surface font-body dot-grid h-screen flex flex-col select-none overflow-hidden">
-
-  <!-- Sync Status Pill — hover on desktop, tap on mobile -->
-  <div id="sync-container" class="fixed top-4 right-4 md:top-5 md:right-6 z-50 flex flex-col items-end">
-    <button id="sync-btn" class="flex flex-col gap-1 border-2 border-on-surface bg-white px-3 py-2.5 brutalist-shadow-sm cursor-help text-left w-[185px]" aria-expanded="false" aria-controls="sync-tooltip">
-      <div class="flex items-center gap-2">
-        <div id="sync-dot" class="w-2.5 h-2.5 bg-yellow-500 sync-pulse flex-shrink-0"></div>
-        <span id="sync-text" class="font-headline text-xs font-bold tracking-widest uppercase">WAITING</span>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body
+    class="bg-surface text-on-surface font-body dot-grid h-screen flex flex-col select-none overflow-hidden"
+  >
+    <!-- Sync Status Pill — hover on desktop, tap on mobile -->
+    <div
+      id="sync-container"
+      class="fixed top-4 right-4 md:top-5 md:right-6 z-50 flex flex-col items-end"
+    >
+      <button
+        id="sync-btn"
+        class="relative overflow-hidden flex flex-col gap-1 border-2 border-on-surface bg-white px-3 py-2.5 brutalist-shadow-sm cursor-help text-left"
+        aria-expanded="false"
+        aria-controls="sync-tooltip"
+      >
+        <div class="flex items-center gap-2 relative z-10">
+          <div
+            id="sync-dot"
+            class="w-2.5 h-2.5 bg-yellow-500 sync-pulse flex-shrink-0"
+          ></div>
+          <span
+            id="sync-text"
+            class="font-headline text-xs font-bold tracking-widest uppercase"
+            >WAITING</span
+          >
+        </div>
+        <div
+          id="sync-source"
+          class="font-headline text-[10px] font-semibold text-outline tracking-wide leading-tight relative z-10"
+        ></div>
+        <div
+          id="sync-rtt"
+          class="font-headline text-[10px] font-semibold text-outline tracking-wide leading-tight relative z-10"
+        ></div>
+        <div
+          id="sync-offset"
+          class="font-headline text-[10px] font-semibold text-outline tracking-wide leading-tight relative z-10"
+        ></div>
+        <img
+          src="/watch-band.svg"
+          alt=""
+          aria-hidden="true"
+          class="sync-watch-deco"
+        />
+      </button>
+      <!-- Tooltip — toggled by JS for tap (mobile) + hover (desktop) -->
+      <div
+        id="sync-tooltip"
+        class="sync-tooltip-hidden absolute top-full right-0 mt-3 w-[calc(100vw-2rem)] max-w-80 bg-white border-2 border-on-surface p-4 brutalist-shadow-sm font-body text-xs text-on-surface leading-relaxed z-50 max-h-[70vh] overflow-y-auto"
+      >
+        <div id="sync-tooltip-text"></div>
       </div>
-      <div id="sync-source" class="font-headline text-[10px] font-semibold text-outline tracking-wide leading-tight"></div>
-      <div id="sync-rtt" class="font-headline text-[10px] font-semibold text-outline tracking-wide leading-tight"></div>
-      <div id="sync-offset" class="font-headline text-[10px] font-semibold text-outline tracking-wide leading-tight"></div>
-    </button>
-    <!-- Tooltip — toggled by JS for tap (mobile) + hover (desktop) -->
-    <div id="sync-tooltip" class="sync-tooltip-hidden absolute top-full right-0 mt-3 w-[calc(100vw-2rem)] max-w-80 bg-white border-2 border-on-surface p-4 brutalist-shadow-sm font-body text-xs text-on-surface leading-relaxed z-50 max-h-[70vh] overflow-y-auto">
-      <div id="sync-tooltip-text"></div>
     </div>
-  </div>
 
-  <!-- Main Clock Area -->
-  <main class="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6">
+    <!-- Main Clock Area -->
+    <main
+      class="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6"
+    >
+      <!-- Clock Container -->
+      <div class="relative w-full flex flex-col items-center gap-3 md:gap-5">
+        <!-- Watch watermark -->
+        <img
+          src="/watch-side-view.svg"
+          alt=""
+          aria-hidden="true"
+          class="watch-watermark"
+        />
 
-    <!-- Clock Container -->
-    <div class="w-full flex flex-col items-center gap-3 md:gap-5">
-
-      <!-- Precision Label -->
-      <div class="font-headline text-[10px] font-bold text-outline tracking-[0.15em] uppercase border-b border-outline pb-1">
-        NIST ATOMIC CLOCK PRECISION
-      </div>
-
-      <!-- Time Display — stacks on narrow portrait, inline on wider -->
-      <div class="clock-container clock-digits font-headline font-bold text-on-surface">
-        <!-- HH:MM row -->
-        <div class="clock-row">
-          <span id="clock-hours" class="clock-time">--</span>
-          <span class="clock-colon text-outline">:</span>
-          <span id="clock-minutes" class="clock-time">--</span>
+        <!-- Precision Label -->
+        <div
+          class="font-headline text-[10px] font-bold text-outline tracking-[0.15em] uppercase border-b border-outline pb-1"
+        >
+          NIST ATOMIC CLOCK PRECISION
         </div>
-        <!-- :SS row (below on narrow, inline on wide) -->
-        <div class="clock-row clock-seconds-row">
-          <span class="clock-colon text-outline clock-colon-wide">:</span>
-          <span id="clock-seconds" class="clock-time">--</span>
+
+        <!-- Time Display — stacks on narrow portrait, inline on wider -->
+        <div
+          class="clock-container clock-digits font-headline font-bold text-on-surface"
+        >
+          <!-- HH:MM row -->
+          <div class="clock-row">
+            <span id="clock-hours" class="clock-time">--</span>
+            <span class="clock-colon text-outline">:</span>
+            <span id="clock-minutes" class="clock-time">--</span>
+          </div>
+          <!-- :SS row (below on narrow, inline on wide) -->
+          <div class="clock-row clock-seconds-row">
+            <span class="clock-colon text-outline clock-colon-wide">:</span>
+            <span id="clock-seconds" class="clock-time">--</span>
+          </div>
+        </div>
+
+        <!-- Badges Row -->
+        <div class="flex gap-3 items-center">
+          <div
+            id="clock-ampm"
+            class="bg-accent text-accent-dark px-3 py-1 font-headline font-bold text-lg md:text-2xl border-2 border-on-surface tracking-wide"
+          >
+            --
+          </div>
+          <div
+            class="bg-white text-on-surface px-3 py-1 font-headline font-bold text-lg md:text-2xl border-2 border-on-surface tracking-wide"
+          >
+            <span id="clock-timezone">---</span>
+          </div>
+        </div>
+
+        <!-- Date -->
+        <div
+          id="clock-date"
+          class="font-body text-sm md:text-base text-outline font-medium tracking-wide"
+        >
+          ---
         </div>
       </div>
+    </main>
 
-      <!-- Badges Row -->
-      <div class="flex gap-3 items-center">
-        <div id="clock-ampm" class="bg-accent text-accent-dark px-3 py-1 font-headline font-bold text-lg md:text-2xl border-2 border-on-surface tracking-wide">
-          --
+    <!-- Bottom Bar -->
+    <footer class="flex items-center justify-between px-4 md:px-8 py-3 md:py-4">
+      <a
+        href="https://shaughv.com"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="opacity-70 hover:opacity-100 transition-opacity"
+      >
+        <img
+          src="https://shaughv.s3.us-east-1.amazonaws.com/brandmark/SHAUGHV-Official.svg"
+          alt="SHAUGHV"
+          class="h-10 md:h-14"
+        />
+      </a>
+
+      <label class="flex items-center gap-3 cursor-pointer group">
+        <span
+          class="font-headline text-[10px] font-bold text-outline tracking-widest uppercase group-hover:text-on-surface"
+        >
+          24-HOUR
+        </span>
+        <div class="relative inline-flex items-center">
+          <input type="checkbox" id="toggle-24" class="peer sr-only" />
+          <div
+            class="w-10 h-5 border-2 border-on-surface bg-white peer-checked:bg-accent transition-colors"
+          ></div>
+          <div
+            class="absolute left-[3px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-on-surface transition-all peer-checked:left-[21px]"
+          ></div>
         </div>
-        <div class="bg-white text-on-surface px-3 py-1 font-headline font-bold text-lg md:text-2xl border-2 border-on-surface tracking-wide">
-          <span id="clock-timezone">---</span>
-        </div>
-      </div>
+      </label>
+    </footer>
 
-      <!-- Date -->
-      <div id="clock-date" class="font-body text-sm md:text-base text-outline font-medium tracking-wide">
-        ---
-      </div>
-
-    </div>
-  </main>
-
-  <!-- Bottom Bar -->
-  <footer class="flex items-center justify-between px-4 md:px-8 py-3 md:py-4">
-    <a href="https://shaughv.com" target="_blank" rel="noopener noreferrer" class="opacity-70 hover:opacity-100 transition-opacity">
-      <img
-        src="https://shaughv.s3.us-east-1.amazonaws.com/brandmark/SHAUGHV-Official.svg"
-        alt="SHAUGHV"
-        class="h-10 md:h-14"
-      />
-    </a>
-
-    <label class="flex items-center gap-3 cursor-pointer group">
-      <span class="font-headline text-[10px] font-bold text-outline tracking-widest uppercase group-hover:text-on-surface">
-        24-HOUR
-      </span>
-      <div class="relative inline-flex items-center">
-        <input type="checkbox" id="toggle-24" class="peer sr-only" />
-        <div class="w-10 h-5 border-2 border-on-surface bg-white peer-checked:bg-accent transition-colors"></div>
-        <div class="absolute left-[3px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-on-surface transition-all peer-checked:left-[21px]"></div>
-      </div>
-    </label>
-  </footer>
-
-  <script type="module" src="/src/main.js"></script>
-</body>
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>

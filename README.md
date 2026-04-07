@@ -20,6 +20,8 @@ Built by [SHAUGHV](https://shaughv.com) | [QubeTX](https://qubetx.com) | [emmett
   - Conflict-free composition: analogy tags + domain categories prevent contradictions across sections
   - `humanFraction()` algorithm converts ms to natural English fractions ("an eighth of a second")
 - **Live tab title** — browser tab shows the corrected atomic time every second, even from other tabs
+- **Pretext-powered responsive sizing** — `@chenglou/pretext` dynamically measures clock text and scales digits to fill the viewport width at every size, from tiny phones to ultrawide monitors. CSS `clamp()` retained as fallback.
+- **Watch SVG decorations** — faint wristwatch watermark behind the clock digits + clipped watch-band illustration in the sync status pill (Quiver AI-generated)
 - **Fully responsive** — mobile portrait (stacked HH:MM / SS), landscape, tablet, desktop, TV
 - **Brutalist design** — zero border radius, hard shadows, dot grid, Makira Sans Serif + Space Grotesk
 - **Re-syncs every 10 minutes** + on tab re-focus after 2+ minutes hidden
@@ -58,7 +60,9 @@ Behind one HTML page and a handful of vanilla JS modules, ATOMIC TIME packs:
 
 - **A 20ms render loop** — not `requestAnimationFrame` (which skips background tabs), but `setInterval` at 20ms, matching time.gov's own approach. DOM updates are batched: time updates only when the second changes, metadata only when the minute changes.
 
-- **Zero dependencies beyond Tailwind** — no React, no framework, no state library. Just ES modules, `EventTarget` for pub/sub, and `localStorage` for the 12/24h preference. The entire app is a few kilobytes of JS.
+- **Pretext-powered dynamic sizing** — `@chenglou/pretext` measures clock text via Canvas at runtime, then scales `fontSize` to fill the viewport width minus responsive padding (24px mobile, 6% tablet, 12% TV). A RAF-gated resize listener re-measures on every window resize without ResizeObserver. The sync pill also uses Pretext to auto-size its width after every status change, keeping text from overlapping the decorative watch SVG.
+
+- **Near-zero dependencies** — just Tailwind and Pretext (~3KB gzipped). No React, no framework, no state library. ES modules, `EventTarget` for pub/sub, and `localStorage` for the 12/24h preference.
 
 ## Live At
 
@@ -90,6 +94,7 @@ Auto-deploys to Vercel on push to `main` via GitHub Actions.
 - Vite
 - Vanilla HTML/CSS/JS (no framework)
 - Tailwind CSS v4
+- [@chenglou/pretext](https://github.com/chenglou/pretext) (dynamic text measurement)
 - Makira Sans Serif (self-hosted, headlines/body) + Space Grotesk (Google Fonts, clock digits)
 
 ## Changelog

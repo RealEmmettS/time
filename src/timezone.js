@@ -17,14 +17,14 @@
 export function detectTimezone() {
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (tz && tz !== 'UTC' && tz.includes('/')) return tz;
+    if (tz && tz !== "UTC" && tz.includes("/")) return tz;
     if (tz) return tz;
   } catch {
     // Intl API not available
   }
   const offset = new Date().getTimezoneOffset();
-  if (offset === 0) return 'Etc/UTC';
-  const sign = offset <= 0 ? '+' : '-';
+  if (offset === 0) return "Etc/UTC";
+  const sign = offset <= 0 ? "+" : "-";
   const hours = Math.floor(Math.abs(offset) / 60);
   return `Etc/GMT${sign}${hours}`;
 }
@@ -34,7 +34,7 @@ export function detectTimezone() {
  */
 export function isTimezoneConfident() {
   const tz = detectTimezone();
-  return tz && tz.includes('/') && !tz.startsWith('Etc/');
+  return tz && tz.includes("/") && !tz.startsWith("Etc/");
 }
 
 /**
@@ -46,11 +46,11 @@ export function isTimezoneConfident() {
 export function getTimezoneAbbr(date) {
   try {
     const tz = detectTimezone();
-    const parts = new Intl.DateTimeFormat('en-US', {
+    const parts = new Intl.DateTimeFormat("en-US", {
       timeZone: tz,
-      timeZoneName: 'short',
+      timeZoneName: "short",
     }).formatToParts(date);
-    const tzPart = parts.find((p) => p.type === 'timeZoneName');
+    const tzPart = parts.find((p) => p.type === "timeZoneName");
     if (tzPart && tzPart.value) return tzPart.value;
   } catch {
     // Fall through
@@ -58,8 +58,8 @@ export function getTimezoneAbbr(date) {
   try {
     const match = date.toString().match(/\(([^)]+)\)/);
     if (match) {
-      const words = match[1].split(' ');
-      if (words.length >= 2) return words.map((w) => w[0]).join('');
+      const words = match[1].split(" ");
+      if (words.length >= 2) return words.map((w) => w[0]).join("");
       return match[1];
     }
   } catch {
@@ -75,12 +75,14 @@ export function getTimezoneAbbr(date) {
  */
 export function getUtcOffsetString(date) {
   const offsetMin = date.getTimezoneOffset();
-  if (offsetMin === 0) return 'UTC';
-  const sign = offsetMin > 0 ? '-' : '+';
+  if (offsetMin === 0) return "UTC";
+  const sign = offsetMin > 0 ? "-" : "+";
   const absMin = Math.abs(offsetMin);
   const hours = Math.floor(absMin / 60);
   const mins = absMin % 60;
-  return mins > 0 ? `UTC${sign}${hours}:${String(mins).padStart(2, '0')}` : `UTC${sign}${hours}`;
+  return mins > 0
+    ? `UTC${sign}${hours}:${String(mins).padStart(2, "0")}`
+    : `UTC${sign}${hours}`;
 }
 
 /**
@@ -91,15 +93,15 @@ export function getUtcOffsetString(date) {
  */
 export function formatTime(date, use24Hour = false) {
   let hours = date.getHours();
-  let ampm = '';
+  let ampm = "";
   if (!use24Hour) {
-    ampm = hours >= 12 ? 'PM' : 'AM';
+    ampm = hours >= 12 ? "PM" : "AM";
     hours = hours % 12 || 12;
   }
   return {
-    hours: String(hours).padStart(2, '0'),
-    minutes: String(date.getMinutes()).padStart(2, '0'),
-    seconds: String(date.getSeconds()).padStart(2, '0'),
+    hours: String(hours).padStart(2, "0"),
+    minutes: String(date.getMinutes()).padStart(2, "0"),
+    seconds: String(date.getSeconds()).padStart(2, "0"),
     ampm,
   };
 }
@@ -111,19 +113,37 @@ export function formatTime(date, use24Hour = false) {
  */
 export function formatDateString(date) {
   try {
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   } catch {
     // Manual fallback
   }
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const days = [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+  ];
   const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
   return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 }
@@ -148,7 +168,7 @@ export async function resolveTimezoneFromLocation() {
         clearTimeout(timeout);
         resolve(null);
       },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
     );
   });
 
@@ -159,13 +179,18 @@ export async function resolveTimezoneFromLocation() {
     const url = `https://timeapi.io/api/time/current/coordinate?latitude=${coords.lat}&longitude=${coords.lng}`;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+    const res = await fetch(url, {
+      signal: controller.signal,
+      cache: "no-store",
+    });
     clearTimeout(timeout);
 
     if (!res.ok) return null;
     const data = await res.json();
-    if (data.timeZone && data.timeZone.includes('/')) {
-      console.log(`[Timezone] Resolved from location: ${data.timeZone} (${coords.lat}, ${coords.lng})`);
+    if (data.timeZone && data.timeZone.includes("/")) {
+      console.log(
+        `[Timezone] Resolved from location: ${data.timeZone} (${coords.lat}, ${coords.lng})`,
+      );
       return data.timeZone;
     }
   } catch {

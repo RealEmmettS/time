@@ -2,19 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-04-06
+
+### Added
+
+- **Pretext integration** (`@chenglou/pretext`) for dynamic text measurement and responsive clock sizing
+- **Dynamic fit-to-width clock digits** — Pretext measures clock text at runtime and scales font size to fill available viewport width, with responsive padding (more on large screens, less on mobile). CSS `clamp()` retained as fallback before fonts load.
+- **Watch side-view SVG watermark** — faint (2.5% opacity) full-viewport-height wristwatch silhouette behind the clock digits
+- **Watch-band SVG in sync pill** — decorative watch-band illustration positioned on the right edge of the sync status pill, clipped by parent overflow for a partial-silhouette effect
+- **Pretext-powered sync pill sizing** — button width dynamically measured via Pretext after each status change so text never overlaps the watch SVG decoration
+- RAF-gated window resize listener for smooth Pretext re-measurement (no ResizeObserver)
+- Font readiness gate (`document.fonts.ready`) before all Pretext measurements
+- Vite `optimizeDeps.include` configuration for Pretext's raw TypeScript source
+
+### Changed
+
+- Sync pill restructured: `relative overflow-hidden` container with absolutely positioned clipped SVG decoration
+- Sync pill width is now dynamic (Pretext-measured) instead of fixed `w-[185px]`
+
 ## [0.3.2] - 2026-04-06
 
 ### Changed
+
 - Precision label updated from "ATOMIC CLOCK PRECISION TIME" to "NIST ATOMIC CLOCK PRECISION"
 
 ## [0.3.1] - 2026-04-06
 
 ### Changed
+
 - Replaced favicon with detailed wristwatch SVG icon (green watch face with hour numbers and hands)
 
 ## [0.3.0] - 2026-03-21
 
 ### Added
+
 - Verified `ANALOGY` constants block with 30+ scientifically fact-checked values (eye blink, nerve velocity, finger snap, heartbeat, etc.)
 - `humanFraction()` algorithm for natural-language fraction conversion (140ms → "an eighth of a second") using denominator whitelist
 - Analogy tags (`analogies[]`) and domain categories (`domain`) on all 212 tier descriptions
@@ -23,6 +44,7 @@ All notable changes to this project will be documented in this file.
 - Live corrected time in browser tab title (updates every second, respects 12/24h toggle)
 
 ### Fixed
+
 - Eye blink at 70ms (offset tier) — was wrong, minimum is 100ms; replaced with keypress analogy
 - Nerve signal speed — was 0.3ms/cm, corrected to 0.018ms/cm (15x error)
 - Finger snap duration — was 80ms, corrected to 7ms (Georgia Tech 2021 study, 11x error)
@@ -37,6 +59,7 @@ All notable changes to this project will be documented in this file.
 ## [0.2.1] - 2026-03-21
 
 ### Changed
+
 - Clarified all 212 sync tooltip tier descriptions to distinguish device clock from on-screen corrected time
   - RTT tiers (100): "Your clock is accurate to ±Xms" → "The corrected time on screen is accurate to within ±Xms" (with natural variation)
   - Offset tiers (100): "The displayed time is corrected" → "The time shown on screen has been corrected for this"; added "built-in" qualifier to ambiguous "Your clock" references
@@ -46,6 +69,7 @@ All notable changes to this project will be documented in this file.
 ## [0.2.0] - 2026-03-21
 
 ### Added
+
 - Binary search tier classification engine (`src/tier-data.js`)
   - 100 RTT tiers, 100 offset tiers, 12 watch-setting guidance tiers (212 total)
   - Logarithmic threshold distribution for precision where it matters most
@@ -53,6 +77,7 @@ All notable changes to this project will be documented in this file.
 - Combined accuracy score for watch guidance: `(RTT / 2) + absolute offset`
 
 ### Changed
+
 - Sync card redesigned: vertically stacked with source, RTT, and offset on separate lines
 - Sync card uses fixed width (185px) for consistent UI regardless of content
 - Sync detail data moved inside the pill (was floating below it)
@@ -63,17 +88,20 @@ All notable changes to this project will be documented in this file.
 ## [0.1.2] - 2026-03-19
 
 ### Fixed
+
 - Fixed ~2 second clock delay caused by CDN/browser caching of time API responses — added `cache: 'no-store'` and cache-busting query parameter to all sync fetches
 
 ## [0.1.1] - 2026-03-19
 
 ### Fixed
+
 - Fixed offset calculation bug that double-counted RTT/2 (~73ms accuracy improvement)
 - Fixed clock rendering: switched from requestAnimationFrame to 20ms setInterval (matches time.gov) for consistent second ticking
 - Fixed sync fallback loop logic for cleaner endpoint switching
 - Removed dead code (unused timezone exports)
 
 ### Changed
+
 - Sync status pill: larger text, darker detail line, shows time source name (PTB Atomic Clock / NTP Server)
 - SHAUGHV logo: much larger (h-10/h-14) and more visible (opacity 70%)
 - Sync tooltip: tap to open on mobile, hover on desktop, scrollable on small screens
@@ -92,6 +120,7 @@ All notable changes to this project will be documented in this file.
 ## [0.1.0] - 2026-03-19
 
 ### Added
+
 - Initial release
 - Atomic clock sync via iTime.live API (PTB atomic clocks, Germany)
 - Multi-sample minimum-RTT sync algorithm (~30-50ms accuracy)
