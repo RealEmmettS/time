@@ -19,6 +19,9 @@ All notable changes to this project will be documented in this file.
 
 - Sync pill restructured: `relative overflow-hidden` container with absolutely positioned clipped SVG decoration
 - Sync pill width is now dynamic (Pretext-measured) instead of fixed `w-[185px]`
+- Copyright headers (`Copyright QubeTX — tikset.com`) added to all source files
+- README updated with tikset.com as primary host
+- CLAUDE.md updated with copyright header convention for all new files
 
 ## [0.3.2] - 2026-04-06
 

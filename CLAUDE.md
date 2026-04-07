@@ -26,6 +26,7 @@ Vercel auto-deploys on push to `main` via pre-configured GitHub Actions. No manu
 
 ## Conventions
 
+- **Copyright header:** Every source file must include a copyright line at the top. Use `// Copyright QubeTX — tikset.com` for JS files, `/* Copyright QubeTX — tikset.com */` for CSS, and `<!-- Copyright QubeTX — tikset.com -->` for HTML.
 - **Tailwind CSS v4** — uses inline `@theme` block in `src/style.css` (no `tailwind.config.js`)
 - **Fonts:** Makira Sans Serif (headlines/body, self-hosted WOFF2 from `public/fonts/`), Space Grotesk (clock digits only, Google Fonts). See `@theme` block in `src/style.css` for `--font-headline`, `--font-body`, `--font-clock`.
 - **Design:** Brutalist — zero border radius, hard offset shadows, dot grid bg, all-caps labels
