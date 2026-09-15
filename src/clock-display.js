@@ -86,7 +86,7 @@ export class ClockDisplay {
     document.addEventListener("click", (event) => {
       if (!container.contains(event.target)) setOpen(false);
     });
-    container.addEventListener("keydown", (event) => {
+    document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !panel.hidden) {
         setOpen(false);
         syncBtn.focus();
