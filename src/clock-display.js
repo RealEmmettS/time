@@ -257,7 +257,7 @@ export class ClockDisplay {
     set(
       "diagnostic-upstream",
       info.upstream
-        ? `time.cloudflare.com · ±${duration(info.upstreamUncertainty)} upstream range, including NTP path and reported root uncertainty`
+        ? `${info.upstream.name} · ±${duration(info.upstreamUncertainty)} upstream range, including NTP path and reported root uncertainty`
         : "No measured upstream range is available for this source.",
     );
     set(
@@ -283,7 +283,7 @@ export class ClockDisplay {
     set(
       "diagnostic-drift",
       info.hasReference
-        ? `${duration(info.driftAllowance)} since measurement (assumes 100 ppm oscillator drift)`
+        ? `${duration(info.driftAllowance)} since measurement (100 ppm allowance, plus any applied correction). ${info.drift?.active ? `Measured rate correction ${(info.drift.rate * 1e6).toFixed(1)} ppm; historical model, not hardware calibration.` : `No rate correction: no validated drift model yet (${info.drift?.samples || 0} measurements).`}`
         : "Not measured",
     );
     set(
@@ -295,7 +295,7 @@ export class ClockDisplay {
       info.checks
         .map(
           (check) =>
-            `${check.endpoint.name}: ${check.error ? "unavailable or inconsistent" : `±${duration(check.uncertainty)}, checked ${Math.floor(Math.max(0, this.sync.monotonic() - check.measuredAt) / 1000)} s ago`}`,
+            `${check.endpoint.name}: ${check.error ? "unavailable or inconsistent" : `±${duration(check.uncertainty)}, checked ${Math.floor(Math.max(0, this.sync.monotonic() - check.measuredAt) / 1000)} s ago`}${info.rejectedSources?.includes(check.endpoint.name) ? " — excluded by majority agreement" : ""}${check.endpoint.observeOnly ? " — leap-smearing service; never used to set this clock" : ""}`,
         )
         .join(" · ") || "Not checked yet",
     );

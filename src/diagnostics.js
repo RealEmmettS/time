@@ -53,7 +53,9 @@ export function describeClock(info) {
         : "Use the large clock’s second change to set your watch. Network uncertainty, browser scheduling, and screen refresh all affect the visible tick.",
     agreement:
       info.agreement === "agree"
-        ? "Checked sources agree within their measured ranges. Agreement is a cross-check, not proof of UTC accuracy."
+        ? info.rejectedSources?.length
+          ? `A majority agrees within its measured ranges. Excluded: ${info.rejectedSources.join(", ")}. Agreement does not prove UTC accuracy.`
+          : "Checked sources agree within their measured ranges. Agreement is a cross-check, not proof of UTC accuracy."
         : info.agreement === "disagree"
           ? "Sources disagree; the previous reference is retained if available."
           : "Only one source is available or the cross-check has expired. The result is relative to that source.",

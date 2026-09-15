@@ -27,7 +27,7 @@ npm run check
 npm run build
 ```
 
-Vite serves the UI locally; it does not run Vercel Functions. Without a deployed primary API, local development uses the configured public fallback sources. Validate the complete primary protocol on a Vercel preview. Do not use a local server's system clock as an independent time reference.
+Vite runs the same NTP-backed time handler locally, including the Cloudflare default and NIST comparison route. UDP port 123 must be reachable for these sources. Validate deployment behavior on a Vercel preview as well.
 
 ```sh
 node scripts/compare-timing.mjs
@@ -47,3 +47,5 @@ This HTTPS endpoint cannot replace the NTP server configured in Windows. The web
 Vanilla JavaScript ES modules, Vite, Tailwind CSS, and Pretext for responsive text sizing. Makira is self-hosted; Space Grotesk is used for clock digits.
 
 See [CHANGELOG.md](CHANGELOG.md).
+
+Cloudflare remains preferred within the unique majority agreement. NIST supplies an additional independent NTP reference; ambiguous disagreements retain the previous reference. A bounded browser drift model only activates after at least 12 spaced measurements over 11 minutes and three successful subsequent predictions. See [METHODOLOGY.md](METHODOLOGY.md).
