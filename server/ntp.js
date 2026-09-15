@@ -62,6 +62,8 @@ export function parseReply(packet, request, { sent, received, nearUnixMs }) {
     offset,
     uncertainty,
     measuredAt: received,
+    rtt: elapsed,
+    processing,
     delay,
     rootDelay,
     rootDispersion,
@@ -111,12 +113,20 @@ export function queryCloudflare({
       }
     });
     // Connected UDP socket restricts replies to the selected Cloudflare peer.
-    socket.connect(123, "time.cloudflare.com", () => {
-      if (finished) return;
-      sent = monotonic();
-      socket.send(request, (error) => {
-        if (error) finish(error);
+    try {
+      socket.connect(123, "time.cloudflare.com", () => {
+        if (finished) return;
+        try {
+          sent = monotonic();
+          socket.send(request, (error) => {
+            if (error) finish(error);
+          });
+        } catch (error) {
+          finish(error);
+        }
       });
-    });
+    } catch (error) {
+      finish(error);
+    }
   });
 }

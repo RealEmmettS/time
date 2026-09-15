@@ -12,7 +12,12 @@ import {
 } from "./timing.js";
 
 export const ENDPOINTS = [
-  { name: "Cloudflare via Vercel", url: "/api/time", protocol: true },
+  {
+    name: "Cloudflare via Vercel",
+    url: "/api/time",
+    protocol: true,
+    upstream: true,
+  },
   {
     name: "time.now",
     url: "https://time.now/developer/api/timezone/Etc/UTC",

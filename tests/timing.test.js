@@ -8,7 +8,7 @@ import {
   timerResolution,
   timingSample,
 } from "../src/timing.js";
-import { AtomicClockSync } from "../src/atomic-sync.js";
+import { AtomicClockSync, ENDPOINTS } from "../src/atomic-sync.js";
 import { describeClock } from "../src/diagnostics.js";
 import { createTimeHandler } from "../server/reference-clock.js";
 
@@ -198,7 +198,9 @@ function fixture({
       state.mono += 10;
       const data = mutate({
         version: 1,
-        requestId: new URL(url).searchParams.get("requestId"),
+        requestId: new URL(url, "https://tikset.test").searchParams.get(
+          "requestId",
+        ),
         receivedAt,
         sentAt,
         timestamp: sentAt,
@@ -411,7 +413,7 @@ test("upstream uncertainty is retained after browser sample fusion", async () =>
       },
     }),
   });
-  endpoints[0].upstream = true;
+  Object.assign(endpoints[0], ENDPOINTS[0]);
   await clock.sync();
   const info = clock.getStatus();
   assert.equal(info.upstreamUncertainty, 15);
@@ -419,7 +421,7 @@ test("upstream uncertainty is retained after browser sample fusion", async () =>
 });
 test("missing upstream metadata rejects the Cloudflare endpoint", async () => {
   const { clock, endpoints } = fixture();
-  endpoints[0].upstream = true;
+  Object.assign(endpoints[0], ENDPOINTS[0]);
   await clock.sync();
   assert.equal(clock.getStatus().endpoint.name, "source1");
 });

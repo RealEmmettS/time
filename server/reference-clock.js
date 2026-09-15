@@ -31,7 +31,7 @@ export function createReferenceClock({
       if (mono < retryAfter)
         throw new Error("Time reference is temporarily unavailable");
       // Share one bounded refresh within this function instance; do not poll per visitor.
-      pending = (async () => {
+      pending = Promise.resolve().then(async () => {
         try {
           const samples = [];
           for (let i = 0; i < 3; i++) samples.push(await query());
@@ -68,7 +68,7 @@ export function createReferenceClock({
         } finally {
           pending = null;
         }
-      })();
+      });
       return pending;
     },
   };
@@ -115,7 +115,9 @@ export function createTimeHandler(clock = createReferenceClock()) {
               ) *
                 DRIFT,
             ageMs: Math.max(0, sent - reference.measuredAt),
-            roundTripMs: reference.delay,
+            roundTripMs: reference.rtt,
+            processingMs: reference.processing,
+            networkDelayMs: reference.delay,
             rootDelayMs: reference.rootDelay,
             rootDispersionMs: reference.rootDispersion,
             stratum: reference.stratum,

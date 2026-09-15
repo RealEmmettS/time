@@ -118,6 +118,40 @@ test("UDP socket error closes the socket and rejects", async () => {
   assert.ok(closed);
 });
 
+test("synchronous UDP connect and send failures close the socket", async () => {
+  for (const operation of ["connect", "send"]) {
+    const socket = new EventEmitter();
+    let closed = false;
+    socket.close = () => {
+      closed = true;
+    };
+    socket.connect = (_port, _host, callback) => callback();
+    socket[operation] = () => {
+      throw new Error("socket failure");
+    };
+    await assert.rejects(
+      queryCloudflare({ createSocket: () => socket }),
+      /socket failure/,
+    );
+    assert.ok(closed);
+  }
+});
+
+test("synchronous upstream failure can recover after backoff", async () => {
+  let mono = 0;
+  const clock = createReferenceClock({
+    query: () => {
+      if (!mono) throw new Error("offline");
+      return sample();
+    },
+    now: () => mono,
+    wall: () => mono,
+  });
+  await assert.rejects(clock.get(), /offline/);
+  mono = 60000;
+  assert.ok(await clock.get());
+});
+
 const sample = (offset = 1_700_000_000_000) => ({
   offset,
   uncertainty: 10,

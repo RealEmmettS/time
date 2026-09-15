@@ -37,6 +37,7 @@ if (target) {
       previous = [];
     const start = performance.now();
     let wallAnchor;
+    let upstreamUncertainty = 0;
     for (let i = -1; i < 8; i++) {
       const id = `compare-${round}-${i + 1}-${Date.now()}`;
       const url = new URL(`/api/time?requestId=${id}`, base);
@@ -69,6 +70,10 @@ if (target) {
           "Preview endpoint is not accessible or does not implement protocol v1",
         );
       if (i >= 0) {
+        upstreamUncertainty = Math.max(
+          upstreamUncertainty,
+          data.source?.uncertaintyMs ?? 0,
+        );
         modern.push(
           timingSample({
             sent,
@@ -90,6 +95,8 @@ if (target) {
       elapsedMs: performance.now() - start,
       legacy: legacy(previous),
       revised: revised && { ...revised, offset: revised.offset - wallAnchor },
+      upstreamUncertainty,
+      combinedUncertainty: revised && revised.uncertainty + upstreamUncertainty,
       fastestRttMs: Math.min(...modern.map((s) => s.rtt)),
     });
   }
@@ -148,6 +155,8 @@ console.log(
         acceptedRounds: rows.filter((r) => r.revised).length,
         offsets: stats(rows.map((r) => r.revised?.offset)),
         uncertainty: stats(rows.map((r) => r.revised?.uncertainty)),
+        upstreamUncertainty: stats(rows.map((r) => r.upstreamUncertainty)),
+        combinedUncertainty: stats(rows.map((r) => r.combinedUncertainty)),
         absoluteError: target
           ? null
           : stats(
