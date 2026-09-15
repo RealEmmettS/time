@@ -1,22 +1,33 @@
 // Copyright QubeTX — tikset.com
 
-/**
- * Vercel Edge Function — self-hosted time endpoint.
- * Returns the current server timestamp (NTP-synced, Stratum 2-3).
- * Runs on Vercel's global edge network for <1ms cold start and ~5-20ms RTT.
- */
-
 export const config = { runtime: "edge" };
 
-export function GET() {
-  const now = Date.now();
-  return new Response(JSON.stringify({ timestamp: now }), {
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Cache-Control": "no-store, no-cache, must-revalidate",
-      Pragma: "no-cache",
-      Expires: "0",
+// Handler timestamps, not NIC timestamps. Hosting clock accuracy is not measured here.
+export function GET(request) {
+  const receivedAt = Date.now();
+  const value = request
+    ? new URL(request.url).searchParams.get("requestId")
+    : null;
+  const requestId = value && /^[a-zA-Z0-9-]{1,80}$/.test(value) ? value : null;
+  const sentAt = Date.now();
+  return new Response(
+    JSON.stringify({
+      version: 1,
+      requestId,
+      receivedAt,
+      sentAt,
+      timestamp: sentAt,
+    }),
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+        "CDN-Cache-Control": "no-store",
+        "Vercel-CDN-Cache-Control": "no-store",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
     },
-  });
+  );
 }

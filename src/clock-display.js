@@ -2,7 +2,7 @@
 
 /**
  * Clock display — renders atomic-corrected time to the DOM.
- * Uses setInterval at 20ms (same approach as time.gov) for reliable second ticking.
+ * Renders on corrected second boundaries and keeps diagnostics separate from time transfer.
  */
 
 import {
@@ -11,22 +11,18 @@ import {
   getTimezoneAbbr,
   getUtcOffsetString,
 } from "./timezone.js";
-import {
-  classify,
-  RTT_THRESHOLDS,
-  RTT_TIERS,
-  OFFSET_THRESHOLDS,
-  OFFSET_TIERS,
-  WATCH_THRESHOLDS,
-  WATCH_TIERS,
-} from "./tier-data.js";
+import { SecondScheduler } from "./second-scheduler.js";
+import { describeClock, duration } from "./diagnostics.js";
 import { prepareWithSegments, walkLineRanges } from "@chenglou/pretext";
 
 export class ClockDisplay {
   constructor(atomicSync) {
     this.sync = atomicSync;
     this.use24Hour = false;
-    this._intervalId = null;
+    this.scheduler = new SecondScheduler({
+      now: () => this.sync.nowMs(),
+      render: (value) => this._tick(value),
+    });
     this._lastRenderedSecond = -1;
     this._lastRenderedMinute = -1;
     this._rafId = null;
@@ -71,70 +67,32 @@ export class ClockDisplay {
 
     // Listen for sync status changes
     this.sync.addEventListener("statuschange", (e) => {
-      this._updateSyncStatus(e.detail.status);
+      this._updateSyncStatus();
+      this.scheduler.refresh();
     });
 
-    // Tooltip: tap to toggle on mobile, hover with 1.5s close delay on desktop
     const syncBtn = document.getElementById("sync-btn");
-    const syncTooltip = document.getElementById("sync-tooltip");
-    const syncContainer = document.getElementById("sync-container");
-    this._hoverTimeout = null;
-
-    const showTooltip = () => {
-      if (this._hoverTimeout) {
-        clearTimeout(this._hoverTimeout);
-        this._hoverTimeout = null;
+    const panel = document.getElementById("sync-tooltip");
+    const container = document.getElementById("sync-container");
+    const setOpen = (open) => {
+      panel.hidden = !open;
+      syncBtn.setAttribute("aria-expanded", String(open));
+      if (open) this._updateSyncStatus();
+    };
+    syncBtn.addEventListener("click", () => setOpen(panel.hidden));
+    document.addEventListener("click", (event) => {
+      if (!container.contains(event.target)) setOpen(false);
+    });
+    container.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !panel.hidden) {
+        setOpen(false);
+        syncBtn.focus();
       }
-      syncTooltip.classList.add("sync-tooltip-visible");
-      syncTooltip.classList.remove("sync-tooltip-hidden");
-      syncBtn.setAttribute("aria-expanded", "true");
-    };
-
-    const hideTooltip = () => {
-      syncTooltip.classList.remove("sync-tooltip-visible");
-      syncTooltip.classList.add("sync-tooltip-hidden");
-      syncBtn.setAttribute("aria-expanded", "false");
-    };
-
-    const hideTooltipDelayed = () => {
-      if (this._hoverTimeout) clearTimeout(this._hoverTimeout);
-      this._hoverTimeout = setTimeout(hideTooltip, 1500);
-    };
-
-    if (syncBtn && syncTooltip && syncContainer) {
-      // Desktop: hover with 1.5s delay on leave (covers both pill and tooltip)
-      syncContainer.addEventListener("mouseenter", showTooltip);
-      syncContainer.addEventListener("mouseleave", hideTooltipDelayed);
-
-      // Keep tooltip open while hovering/scrolling the tooltip itself
-      syncTooltip.addEventListener("mouseenter", () => {
-        if (this._hoverTimeout) {
-          clearTimeout(this._hoverTimeout);
-          this._hoverTimeout = null;
-        }
-      });
-      syncTooltip.addEventListener("mouseleave", hideTooltipDelayed);
-
-      // Mobile: tap to toggle
-      syncBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const isVisible = syncTooltip.classList.contains(
-          "sync-tooltip-visible",
-        );
-        if (isVisible) {
-          hideTooltip();
-        } else {
-          showTooltip();
-        }
-      });
-
-      // Close tooltip when tapping anywhere else on the page
-      document.addEventListener("click", (e) => {
-        if (!syncContainer.contains(e.target)) {
-          hideTooltip();
-        }
-      });
-    }
+    });
+    document.getElementById("sync-recheck").addEventListener("click", () => {
+      this.sync.sync({ crossCheck: true });
+    });
+    this._updateSyncStatus();
 
     // Pretext: RAF-gated resize listener (no ResizeObserver)
     const scheduleResize = () => {
@@ -160,35 +118,25 @@ export class ClockDisplay {
   }
 
   start() {
-    // Render immediately
-    this._tick();
-    // Check for second changes every 20ms (same as time.gov)
-    this._intervalId = setInterval(() => this._tick(), 20);
+    this.scheduler.start();
   }
 
   stop() {
-    if (this._intervalId) {
-      clearInterval(this._intervalId);
-      this._intervalId = null;
-    }
+    this.scheduler.stop();
   }
 
-  _tick() {
-    const nowMs = this.sync.nowMs();
+  _tick(nowMs = this.sync.nowMs()) {
     const now = new Date(nowMs);
-    const currentSecond = now.getSeconds();
-
-    // Only update DOM when the second changes
+    const currentSecond = Math.floor(nowMs / 1000);
     if (currentSecond !== this._lastRenderedSecond) {
       this._lastRenderedSecond = currentSecond;
       this._renderTime(now);
-
-      // Update date/timezone less frequently (once per minute)
-      const currentMinute = now.getMinutes();
+      const currentMinute = Math.floor(nowMs / 60_000);
       if (currentMinute !== this._lastRenderedMinute) {
         this._lastRenderedMinute = currentMinute;
         this._renderMeta(now);
       }
+      this._updateSyncStatus();
     }
   }
 
@@ -235,58 +183,123 @@ export class ClockDisplay {
     }
   }
 
-  _updateSyncStatus(status) {
-    if (!this.els.statusDot || !this.els.statusText) return;
-
-    const dot = this.els.statusDot;
-    const text = this.els.statusText;
-
-    // Remove all state classes
-    dot.classList.remove("bg-green-500", "bg-yellow-500", "bg-red-500");
-
-    switch (status) {
-      case "syncing":
-        dot.classList.add("bg-yellow-500");
-        text.textContent = "SYNCING";
-        break;
-      case "synced": {
-        dot.classList.add("bg-green-500");
-        text.textContent = "SYNCED";
-        const info = this.sync.getStatus();
-        const source = info.endpoint?.label || "Time Server";
-        if (this.els.statusSource) this.els.statusSource.textContent = source;
-        if (this.els.statusRtt)
-          this.els.statusRtt.textContent = `${info.rtt}ms RTT`;
-        if (this.els.statusOffset)
-          this.els.statusOffset.textContent = `${info.offset > 0 ? "+" : ""}${info.offset}ms offset`;
-        if (this.els.statusTooltip) {
-          this.els.statusTooltip.innerHTML = this._buildTooltip(info);
-        }
-        break;
-      }
-      case "error":
-        dot.classList.add("bg-red-500");
-        text.textContent = "OFFLINE";
-        if (this.els.statusSource)
-          this.els.statusSource.textContent = "Using device clock";
-        if (this.els.statusRtt) this.els.statusRtt.textContent = "";
-        if (this.els.statusOffset) this.els.statusOffset.textContent = "";
-        if (this.els.statusTooltip) {
-          this.els.statusTooltip.innerHTML =
-            '<div class="mb-2"><div class="font-bold uppercase tracking-wider text-[10px] mb-1">Status</div><p class="leading-relaxed">Could not reach the time server. The clock is showing your device\'s built-in time, which may be off by a second or more. It will try to reconnect automatically.</p></div>';
-        }
-        break;
-      default:
-        dot.classList.add("bg-yellow-500");
-        text.textContent = "WAITING";
-        if (this.els.statusTooltip) {
-          this.els.statusTooltip.innerHTML =
-            '<div><div class="font-bold uppercase tracking-wider text-[10px] mb-1">Status</div><p class="leading-relaxed">Connecting to the atomic clock server to get the exact time...</p></div>';
-        }
-    }
-
-    // Re-measure sync pill width after text changes
-    if (this._fontsReady) this._resizeSyncPill();
+  _updateSyncStatus() {
+    if (!this.els.statusText) return;
+    const info = this.sync.getStatus();
+    const copy = describeClock(info);
+    const set = (id, value) => {
+      const element = document.getElementById(id);
+      if (element && element.textContent !== value) element.textContent = value;
+    };
+    const headlineChanged = this.els.statusText.textContent !== copy.headline;
+    set("sync-text", copy.headline);
+    set(
+      "sync-source",
+      info.status === "syncing"
+        ? "Computer clock · checking"
+        : "Computer clock · details",
+    );
+    set(
+      "sync-rtt",
+      info.hasReference
+        ? `Network range ±${duration(info.networkUncertainty)}`
+        : "Waiting for a time reference",
+    );
+    set(
+      "sync-offset",
+      info.hasReference
+        ? copy.fresh
+          ? "Corrected time below"
+          : "Previous reference · recheck needed"
+        : "Uncorrected device time below",
+    );
+    this.els.statusDot.classList.remove(
+      "bg-green-500",
+      "bg-yellow-500",
+      "bg-red-500",
+    );
+    this.els.statusDot.classList.add(
+      info.status === "conflict" || info.status === "error"
+        ? "bg-red-500"
+        : copy.fresh && info.status !== "syncing"
+          ? "bg-green-500"
+          : "bg-yellow-500",
+    );
+    set(
+      "clock-reference-label",
+      info.hasReference
+        ? copy.fresh
+          ? "NETWORK-CORRECTED TIME"
+          : "PREVIOUS TIME REFERENCE · CHECK NEEDED"
+        : "DEVICE TIME · NOT YET CHECKED",
+    );
+    set("diagnostic-summary", copy.summary);
+    set("diagnostic-correction", copy.correction);
+    set("diagnostic-watch", copy.watch);
+    set("diagnostic-issue", info.issue);
+    set(
+      "diagnostic-range",
+      info.hasReference
+        ? `±${duration(info.networkUncertainty)} at the last measurement`
+        : "Not measured",
+    );
+    set(
+      "diagnostic-age",
+      info.age === null
+        ? "No successful check yet"
+        : `${Math.floor(info.age / 1000)} seconds ago`,
+    );
+    set("diagnostic-agreement", copy.agreement);
+    set("diagnostic-source", info.endpoint?.name || "None");
+    set("diagnostic-rtt", duration(info.rtt));
+    set("diagnostic-jitter", duration(info.jitter));
+    set(
+      "diagnostic-offset",
+      info.hasReference
+        ? `${duration(Math.abs(info.offset))} ${info.offset >= 0 ? "behind" : "ahead"}; range ±${duration(info.offsetUncertainty)}`
+        : "Not measured",
+    );
+    set(
+      "diagnostic-samples",
+      info.hasReference
+        ? `${info.samplesUsed} of ${info.samplesTotal} accepted; ${info.samplesRejected} rejected`
+        : "Not measured",
+    );
+    set(
+      "diagnostic-drift",
+      info.hasReference
+        ? `${duration(info.driftAllowance)} since measurement (assumes 100 ppm oscillator drift)`
+        : "Not measured",
+    );
+    set(
+      "diagnostic-resolution",
+      `Timing floor ${duration(info.resolution)}; device clock floor ${duration(info.wallResolution)}`,
+    );
+    set(
+      "diagnostic-checks",
+      info.checks
+        .map(
+          (check) =>
+            `${check.endpoint.name}: ${check.error ? "unavailable or inconsistent" : `±${duration(check.uncertainty)}, checked ${Math.floor(Math.max(0, this.sync.monotonic() - check.measuredAt) / 1000)} s ago`}`,
+        )
+        .join(" · ") || "Not checked yet",
+    );
+    const metrics = this.scheduler.getMetrics();
+    set(
+      "diagnostic-render",
+      metrics.callbackLateness
+        ? `${duration(metrics.callbackLateness.median)} median / ${duration(metrics.callbackLateness.p95)} p95 callback lateness`
+        : "Collecting visible ticks",
+    );
+    set(
+      "diagnostic-frames",
+      metrics.frameCadence
+        ? `${duration(metrics.frameCadence.median)} median between sampled frames`
+        : "Collecting frames",
+    );
+    document.getElementById("sync-recheck").disabled =
+      info.status === "syncing";
+    if (headlineChanged && this._fontsReady) this._resizeSyncPill();
   }
 
   /**
@@ -317,7 +330,7 @@ export class ClockDisplay {
 
     // dot(10) + dot-gap(8) + text + right padding for SVG(48) + button padding(24)
     const totalWidth = Math.ceil(maxWidth + 10 + 8 + 48 + 24);
-    syncBtn.style.minWidth = `${totalWidth}px`;
+    syncBtn.style.width = `${Math.min(totalWidth, window.innerWidth - 32)}px`;
   }
 
   /**
@@ -385,124 +398,5 @@ export class ClockDisplay {
     colonEls.forEach((el) => {
       el.style.fontSize = colonSize;
     });
-  }
-
-  /**
-   * Two-tier conflict resolution for description selection.
-   * Tier 1 (hard): same analogy tag → must swap to alt.
-   * Tier 2 (soft): same domain → prefer alt if different domain available.
-   */
-  _resolveDescription(tier, usedAnalogies, usedDomains) {
-    const hasHardConflict = (tier.analogies || []).some((a) =>
-      usedAnalogies.has(a),
-    );
-    const hasSoftConflict = usedDomains.has(tier.domain);
-
-    // Hard conflict: MUST swap if alt exists
-    if (hasHardConflict && tier.alt) {
-      (tier.alt.analogies || []).forEach((a) => usedAnalogies.add(a));
-      usedDomains.add(tier.alt.domain || tier.domain);
-      return tier.alt.description;
-    }
-
-    // Soft conflict: PREFER swap if alt exists and alt's domain is different
-    if (hasSoftConflict && tier.alt && !usedDomains.has(tier.alt.domain)) {
-      (tier.alt.analogies || []).forEach((a) => usedAnalogies.add(a));
-      usedDomains.add(tier.alt.domain);
-      return tier.alt.description;
-    }
-
-    // No conflict: use primary
-    (tier.analogies || []).forEach((a) => usedAnalogies.add(a));
-    usedDomains.add(tier.domain);
-    return tier.description;
-  }
-
-  _buildTooltip(info) {
-    const rtt = info.rtt;
-    const halfRtt = Math.round(rtt / 2);
-    const absOffset = Math.abs(info.offset);
-    const sign = info.offset > 0 ? "+" : "";
-    const direction = info.offset > 0 ? "behind" : "ahead of";
-    const endpointName = info.endpoint?.name || "unknown";
-    const endpointLabel = info.endpoint?.label || "Time Server";
-
-    // Classify each axis via binary search
-    const rttCtx = { rtt, halfRtt };
-    const offsetCtx = { offset: info.offset, absOffset, sign, direction };
-    // Sync uncertainty = how accurate the corrected time on screen is.
-    // Uses Marzullo-fused uncertainty when available (tighter than naive RTT/2).
-    // Does NOT include absOffset — the offset is the correction we applied,
-    // not an error. A 1700ms offset with 36ms uncertainty is just as accurate
-    // as a 5ms offset with 36ms uncertainty.
-    const uncertainty = info.uncertainty > 0 ? info.uncertainty : halfRtt;
-    const watchCtx = {
-      rtt,
-      halfRtt,
-      offset: info.offset,
-      absOffset,
-      uncertainty,
-    };
-
-    const rttTier = classify(RTT_THRESHOLDS, RTT_TIERS, rtt);
-    const offsetTier = classify(OFFSET_THRESHOLDS, OFFSET_TIERS, absOffset);
-    const watchTier = classify(WATCH_THRESHOLDS, WATCH_TIERS, uncertainty);
-
-    // Track used analogies/domains for conflict resolution (RTT wins priority)
-    const usedAnalogies = new Set(rttTier.analogies || []);
-    const usedDomains = new Set([rttTier.domain]);
-
-    // Resolve offset and watch descriptions with conflict avoidance
-    const offsetDesc = this._resolveDescription(
-      offsetTier,
-      usedAnalogies,
-      usedDomains,
-    );
-    const watchDesc = this._resolveDescription(
-      watchTier,
-      usedAnalogies,
-      usedDomains,
-    );
-
-    // Source section — describes the active endpoint
-    const sourceDescriptions = {
-      "Vercel Edge":
-        "This clock synced with a self-hosted edge server on Vercel\u2019s global edge network. The server\u2019s clock is NTP-synced to within 1\u20132ms of UTC via Stratum 2\u20133 infrastructure backed by satellite-connected atomic clocks. As a same-origin request, it avoids the DNS and TLS overhead of third-party APIs.",
-      "time.now":
-        "This clock synced with the time.now API, an NTP-synchronized time service delivered via a global CDN. Timestamps are reported with microsecond resolution, though actual accuracy is limited by NTP sync quality (typically within a few milliseconds of UTC).",
-      "timeapi.io":
-        "This clock synced with timeapi.io, a public NTP-synchronized time server that tracks Coordinated Universal Time (UTC) to within milliseconds.",
-    };
-    const sourceHtml =
-      (sourceDescriptions[endpointName] ||
-        "This clock synced with a time server that tracks UTC.") +
-      " The readings below are the raw measurements from that sync. The time shown on screen has already been corrected using these measurements.";
-
-    // Marzullo uncertainty display (if available)
-    const uncertaintyHtml =
-      info.uncertainty > 0
-        ? ` Marzullo interval fusion across multiple samples narrowed the uncertainty to \u00b1${Math.round(info.uncertainty * 100) / 100}ms.`
-        : "";
-
-    return `
-      <div class="mb-3">
-        <div class="font-bold uppercase tracking-wider text-[10px] mb-1">Source</div>
-        <p class="leading-relaxed">${sourceHtml}</p>
-        <p class="mt-1 text-[10px] opacity-60 uppercase tracking-wider">Active: ${endpointLabel}</p>
-      </div>
-      <div class="mb-3">
-        <div class="font-bold uppercase tracking-wider text-[10px] mb-1">Round-Trip Time</div>
-        <p class="leading-relaxed"><strong>${rttTier.label}.</strong> ${rttTier.description(rttCtx)}${uncertaintyHtml}</p>
-        <p class="mt-1"><a href="https://speedqx.com" target="_blank" rel="noopener noreferrer" class="underline opacity-60 hover:opacity-100 text-[10px] uppercase tracking-wider">Test your connection speed \u2192</a></p>
-      </div>
-      <div class="mb-3">
-        <div class="font-bold uppercase tracking-wider text-[10px] mb-1">Clock Offset</div>
-        <p class="leading-relaxed"><strong>${offsetTier.label}.</strong> ${offsetDesc(offsetCtx)}</p>
-      </div>
-      <div>
-        <div class="font-bold uppercase tracking-wider text-[10px] mb-1">For Setting a Watch</div>
-        <p class="leading-relaxed"><strong>${watchTier.label}.</strong> ${watchDesc(watchCtx)}</p>
-      </div>
-    `.trim();
   }
 }

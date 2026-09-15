@@ -13,7 +13,7 @@
     <title>ATOMIC TIME</title>
     <meta
       name="description"
-      content="ATOMIC TIME by SHAUGHV — a beautiful, responsive atomic clock synced to PTB atomic clocks. A modern alternative to time.gov. Built by QubeTX."
+      content="ATOMIC TIME by SHAUGHV — network-corrected time for setting watches, with computer-clock checks and clear timing diagnostics. Built by QubeTX."
     />
 
     <!-- Favicon -->
@@ -30,14 +30,14 @@
   <body
     class="bg-surface text-on-surface font-body dot-grid h-screen flex flex-col select-none overflow-hidden"
   >
-    <!-- Sync Status Pill — hover on desktop, tap on mobile -->
+    <!-- Clock diagnosis — click, tap, or use the keyboard for details -->
     <div
       id="sync-container"
       class="fixed top-4 right-4 md:top-5 md:right-6 z-50 flex flex-col items-end"
     >
       <button
         id="sync-btn"
-        class="relative overflow-hidden flex flex-col gap-1 border-2 border-on-surface bg-white px-3 py-2.5 brutalist-shadow-sm cursor-help text-left"
+        class="relative overflow-hidden flex flex-col gap-1 border-2 border-on-surface bg-white px-3 py-2.5 brutalist-shadow-sm cursor-pointer text-left"
         aria-expanded="false"
         aria-controls="sync-tooltip"
       >
@@ -71,12 +71,80 @@
           class="sync-watch-deco"
         />
       </button>
-      <!-- Tooltip — toggled by JS for tap (mobile) + hover (desktop) -->
+      <!-- Diagnostics disclosure; controls remain mounted during updates -->
       <div
         id="sync-tooltip"
-        class="sync-tooltip-hidden absolute top-full right-0 mt-3 w-[calc(100vw-2rem)] max-w-80 bg-white border-2 border-on-surface p-4 brutalist-shadow-sm font-body text-xs text-on-surface leading-relaxed z-50 max-h-[70vh] overflow-y-auto"
+        hidden
+        role="region"
+        aria-label="Clock diagnostics"
+        class="absolute top-full right-0 mt-3 w-[calc(100vw-2rem)] max-w-80 bg-white border-2 border-on-surface p-4 brutalist-shadow-sm font-body text-xs text-on-surface leading-relaxed z-50 max-h-[70vh] overflow-y-auto"
       >
-        <div id="sync-tooltip-text"></div>
+        <div id="sync-tooltip-text" class="diagnostics">
+          <h2>Computer clock</h2>
+          <p id="diagnostic-summary" class="diagnostic-lead"></p>
+          <p id="diagnostic-correction"></p>
+          <p id="diagnostic-issue" role="status"></p>
+          <h3>For setting a watch</h3>
+          <p id="diagnostic-watch"></p>
+          <dl>
+            <dt>Network timing uncertainty</dt>
+            <dd id="diagnostic-range"></dd>
+            <dt>Last successful measurement</dt>
+            <dd id="diagnostic-age"></dd>
+            <dt>Source agreement</dt>
+            <dd id="diagnostic-agreement"></dd>
+          </dl>
+          <button id="sync-recheck" type="button">Check again</button>
+          <details>
+            <summary>Measurement details</summary>
+            <dl>
+              <dt>Selected source</dt>
+              <dd id="diagnostic-source"></dd>
+              <dt>Computer clock difference</dt>
+              <dd id="diagnostic-offset"></dd>
+              <dt>Fastest round trip</dt>
+              <dd id="diagnostic-rtt"></dd>
+              <dd class="metric-help">
+                Request to complete response, including server processing. This
+                is delay, not clock error.
+              </dd>
+              <dt>Sample variation</dt>
+              <dd id="diagnostic-jitter"></dd>
+              <dd class="metric-help">
+                Standard deviation of sample offsets before rejection.
+                Consistency does not establish UTC accuracy.
+              </dd>
+              <dt>Reference samples</dt>
+              <dd id="diagnostic-samples"></dd>
+              <dt>Time-source checks</dt>
+              <dd id="diagnostic-checks"></dd>
+              <dt>Drift allowance</dt>
+              <dd id="diagnostic-drift"></dd>
+              <dt>Timestamp resolution</dt>
+              <dd id="diagnostic-resolution"></dd>
+              <dt>Visible-tick scheduling</dt>
+              <dd id="diagnostic-render"></dd>
+              <dt>Frame cadence near the tick</dt>
+              <dd id="diagnostic-frames"></dd>
+            </dl>
+            <p>
+              The network range assumes a stable source clock and includes
+              timestamp resolution. It excludes unknown server error relative to
+              UTC. The drift allowance is a model, not a measured hardware
+              guarantee.
+            </p>
+            <p>
+              Callback measurements stop before the screen displays the pixels.
+              Screen refresh and display latency add delay that this website
+              cannot measure.
+            </p>
+            <p>
+              The page corrects its own display; it cannot change your system
+              clock. Use your operating system’s automatic date and time
+              settings to correct that clock, then check again.
+            </p>
+          </details>
+        </div>
       </div>
     </div>
 
@@ -94,11 +162,12 @@
           class="watch-watermark"
         />
 
-        <!-- Precision Label -->
+        <!-- Current reference state -->
         <div
+          id="clock-reference-label"
           class="font-headline text-[10px] font-bold text-outline tracking-[0.15em] uppercase border-b border-outline pb-1"
         >
-          NIST ATOMIC CLOCK PRECISION
+          DEVICE TIME · NOT YET CHECKED
         </div>
 
         <!-- Time Display — stacks on narrow portrait, inline on wider -->

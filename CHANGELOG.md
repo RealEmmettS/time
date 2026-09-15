@@ -2,13 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-09-15
+
+### Changed
+
+- Corrected reference time advances from a monotonic clock; system clock changes update the diagnosis separately.
+- Extended the existing Vercel endpoint with correlated entry/response timestamps and no-store CDN headers.
+- Replaced incorrect interval selection with unique strict-majority intersection, quantization floors, source cross-checks and explicit conflict/stale states.
+- Refresh every minute while visible; revalidate on resume, reconnect and clock discontinuity, with in-flight generation protection.
+- Align visible ticks to corrected second boundaries and foreground frames; skip delayed callbacks without accumulating drift.
+- Replaced analogy tiers with a clear computer-clock summary, watch guidance, accessible measurement details and manual recheck.
+- Removed unsupported atomic-precision and hosting-accuracy claims; documented source, oscillator and display limitations.
+
+### Added
+
+- Deterministic timing, recovery, protocol and rendering tests in CI.
+- Reproducible paired estimator comparison script and timing methodology.
+
+Earlier release notes below describe historical behavior and claims. The current methodology supersedes their accuracy claims.
+
 ## [0.5.0] - 2026-04-07
 
 ### Added
 
 - **Self-hosted Vercel Edge Function time API** (`/api/time`) — runs on Vercel's global edge network with <1ms cold start and ~5-20ms RTT. NTP-synced to within 1-2ms of UTC via Stratum 2-3 infrastructure. Eliminates all third-party API dependency for primary sync.
 - **Marzullo's algorithm for interval fusion** — the same algorithm family used by NTP. Builds confidence intervals (`[offset - RTT/2, offset + RTT/2]`) from all samples, then finds the maximum-overlap intersection via sweep-line. Returns the midpoint (tighter offset estimate) and radius (tighter uncertainty bound). Yields 2-5x tighter bounds than naive minimum-RTT selection.
-- **IQR-based outlier filtering** — removes statistical outliers before Marzullo fusion using interquartile range (Q3 + 1.5*IQR upper fence). Preserves at least 2 samples even under aggressive filtering.
+- **IQR-based outlier filtering** — removes statistical outliers before Marzullo fusion using interquartile range (Q3 + 1.5\*IQR upper fence). Preserves at least 2 samples even under aggressive filtering.
 - **Connection pre-warming** — throwaway fetch before sample collection establishes DNS + TCP + TLS so all measurement samples run on a warm connection. Drops first-sample RTT from ~467ms (cold) to ~63-146ms (warm) on third-party endpoints.
 - **3-tier endpoint fallback chain** with automatic failover:
   1. Self-hosted Vercel Edge (same-origin, ~5-20ms RTT)

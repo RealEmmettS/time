@@ -13,18 +13,29 @@ const display = new ClockDisplay(sync);
 
 display.mount();
 
-// Start auto-sync (re-syncs every 10 minutes, matching time.gov)
-sync.startAutoSync(600_000);
+sync.startAutoSync();
 
-// Re-sync when tab becomes visible again (handles sleep/background)
+const resume = () => {
+  sync.invalidate("Returning to the clock. Checking the time reference again.");
+  sync.sync({ crossCheck: true });
+  display.scheduler.refresh();
+};
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
-    const elapsed = Date.now() - sync.lastSync;
-    if (elapsed > 120_000) {
-      sync.sync().catch(() => {});
-    }
-  }
+  if (document.visibilityState === "visible") resume();
+  else display.scheduler.refresh();
 });
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) resume();
+});
+window.addEventListener("online", resume);
+window.addEventListener("offline", () => {
+  sync.invalidate(
+    "Connection lost. The previous reference continues if available.",
+  );
+});
+setInterval(() => {
+  if (document.visibilityState === "visible") sync.checkContinuity();
+}, 1000);
 
 // Timezone confidence check — only request location if Intl API gives weak results.
 // On 99.9% of modern browsers, the Intl API returns a correct IANA timezone and this never fires.
