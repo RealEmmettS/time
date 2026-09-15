@@ -3,6 +3,45 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { SecondScheduler } from "../src/second-scheduler.js";
 
+test("native scheduling functions are invoked without a foreign receiver", () => {
+  const names = [
+    "setTimeout",
+    "clearTimeout",
+    "requestAnimationFrame",
+    "cancelAnimationFrame",
+  ];
+  const original = new Map(names.map((name) => [name, globalThis[name]]));
+  const calls = [];
+  let callback;
+  try {
+    for (const name of names)
+      globalThis[name] = function (fn) {
+        assert.ok(
+          this === undefined || this === globalThis,
+          "native Window method cannot receive the scheduler as this",
+        );
+        calls.push(name);
+        if (typeof fn === "function") callback = fn;
+        return 1;
+      };
+    const scheduler = new SecondScheduler({
+      now: () => 950,
+      render: () => {},
+      visible: () => true,
+    });
+    scheduler.start();
+    callback();
+    scheduler.stop();
+    assert.ok(calls.includes("requestAnimationFrame"));
+    assert.ok(calls.includes("cancelAnimationFrame"));
+  } finally {
+    for (const [name, fn] of original) {
+      if (fn === undefined) delete globalThis[name];
+      else globalThis[name] = fn;
+    }
+  }
+});
+
 function fixture(start = 950) {
   let time = start;
   let nextId = 0;

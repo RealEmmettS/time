@@ -46,11 +46,23 @@ if (target) {
       const response = await fetch(url, {
         cache: "no-store",
         signal: AbortSignal.timeout(3000),
+        redirect: "error",
+        headers: process.env.TIKSET_PREVIEW_COOKIE
+          ? { Cookie: process.env.TIKSET_PREVIEW_COOKIE }
+          : {},
       });
       const headersAt = performance.now();
       const afterHeaders = Date.now();
       const text = await response.text();
       const received = performance.now();
+      if (
+        !response.ok ||
+        !response.headers.get("content-type")?.includes("application/json")
+      ) {
+        throw new Error(
+          "Preview endpoint is protected or did not return JSON; authenticate the preview first.",
+        );
+      }
       const data = JSON.parse(text);
       if (!response.ok || data.version !== 1 || data.requestId !== id)
         throw new Error(

@@ -6,10 +6,10 @@ export class SecondScheduler {
     now,
     render,
     visible = () => document.visibilityState === "visible",
-    setTimer = setTimeout,
-    clearTimer = clearTimeout,
-    frame = requestAnimationFrame,
-    cancelFrame = cancelAnimationFrame,
+    setTimer = (callback, delay) => setTimeout(callback, delay),
+    clearTimer = (id) => clearTimeout(id),
+    frame = (callback) => requestAnimationFrame(callback),
+    cancelFrame = (id) => cancelAnimationFrame(id),
     monotonic = () => performance.now(),
   }) {
     Object.assign(this, {
