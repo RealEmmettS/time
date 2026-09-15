@@ -1,3 +1,4 @@
+// Copyright QubeTX — tikset.com
 import assert from "node:assert/strict";
 import test from "node:test";
 import { selectSources } from "../src/source-selection.js";
