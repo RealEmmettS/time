@@ -58,7 +58,8 @@ export class DriftTracker {
       this.confirmations = 0;
       return this.status();
     }
-    this.model = { rate: (lower + upper) / 2 };
+    // Use the supported rate closest to zero, avoiding an aggressive midpoint estimate.
+    this.model = { rate: lower > 0 ? lower : upper };
     if (this.confirmations >= 3) this.rate = this.model.rate;
     return this.status();
   }

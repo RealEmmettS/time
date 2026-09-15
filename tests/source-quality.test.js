@@ -64,7 +64,7 @@ test("rate correction requires eleven minutes plus three successful predictions"
   for (let i = 0; i < 14; i++)
     assert.equal(tracker.add(driftSample(i)).active, false);
   assert.ok(tracker.add(driftSample(14)).active);
-  assert.ok(Math.abs(tracker.status().rate - 50e-6) < 1e-9);
+  assert.ok(tracker.status().rate > 45e-6 && tracker.status().rate <= 50e-6);
 });
 test("known positive and negative drift improves held-out time estimates", () => {
   for (const rate of [-80e-6, -30e-6, 30e-6, 80e-6]) {

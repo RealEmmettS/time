@@ -283,7 +283,7 @@ export class ClockDisplay {
     set(
       "diagnostic-drift",
       info.hasReference
-        ? `${duration(info.driftAllowance)} since measurement (100 ppm allowance, plus any applied correction). ${info.drift?.active ? `Measured rate correction ${(info.drift.rate * 1e6).toFixed(1)} ppm; historical model, not hardware calibration.` : `No rate correction: collecting consistent history (${info.drift?.samples || 0} checks).`}`
+        ? `${duration(info.driftAllowance)} since measurement (100 ppm allowance, plus any applied correction). ${info.drift?.active ? `Measured rate correction ${(info.drift.rate * 1e6).toFixed(1)} ppm; historical model, not hardware calibration.` : `No rate correction: no validated drift model yet (${info.drift?.samples || 0} measurements).`}`
         : "Not measured",
     );
     set(

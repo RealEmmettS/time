@@ -1,3 +1,16 @@
+# Tikset 0.7.0 validation
+
+September 15, 2026. Version 0.7.0 adds NIST and provider-majority selection, preserving Cloudflare preference within the supported group.
+
+- 64 tests pass, including a bad primary replaced with eight fresh samples, comparison outliers, tied clusters, duplicate votes, fresh validation before rejecting a new measurement, and NIST caching/polling guards. Existing clock and scheduler regression tests remain passing.
+- Native local browser test: injected a one-second error into Cloudflare responses. NIST, time.now and timeapi.io formed the unique majority; Tikset selected NIST with 8/8 samples, disclosed Cloudflare's exclusion, and displayed about 66 ms of computer error rather than the injected one-second error. Reload removed the injection; Cloudflare returned as the selected source.
+- Local live measurements from both NTP providers succeeded. Cloudflare was preferred even when the NIST range was smaller.
+- Vercel preview `time-edvd621gx-realemmetts.vercel.app` successfully served both routes. Representative upstream ranges: Cloudflare ±9.59 ms with 1.04 ms RTT; NIST ±22.70 ms with 38.72 ms RTT. NIST reported stratum 1. The browser selected Cloudflare, accepted 8/8 samples, and showed four agreeing providers with a combined range around ±51 ms. No preview console warnings/errors were observed.
+- Controlled stable-drift cases at ±30 and ±80 ppm improve the following minute's rate estimate by more than 90% after qualification. Zero, uncertainty-dominated, oscillating and excessive drift leave correction disabled. The supported rate closest to zero is used after three successful subsequent predictions; this avoids aggressive extrapolation. Actual live drift correction has not been demonstrated in this short session and remains inactive without sufficient evidence.
+- Production release is gated on preview qualification, passing CI and post-deployment public checks. Numerical ranges describe this session, not a UTC or physical-screen accuracy guarantee. Platform limitations from the 0.6.0 validation below still apply.
+
+---
+
 # Tikset 0.6.0 validation
 
 September 15, 2026. Measurements below describe this Windows connection and test session; they are not a UTC accuracy guarantee.
