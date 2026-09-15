@@ -12,7 +12,7 @@ import {
 } from "./timing.js";
 
 export const ENDPOINTS = [
-  { name: "Vercel Edge", url: "/api/time", protocol: true },
+  { name: "Cloudflare via Vercel", url: "/api/time", protocol: true },
   {
     name: "time.now",
     url: "https://time.now/developer/api/timezone/Etc/UTC",
@@ -164,11 +164,21 @@ export class AtomicClockSync extends EventTarget {
     });
     const fused = fuseIntervals(aged);
     if (!fused) throw new Error("Insufficient or conflicting samples");
+    const upstreamUncertainty = Math.max(
+      ...samples.map((s) => s.upstream?.uncertaintyMs || 0),
+    );
+    const networkUncertainty = fused.uncertainty;
+    fused.uncertainty += upstreamUncertainty;
+    fused.lower -= upstreamUncertainty;
+    fused.upper += upstreamUncertainty;
     const offsets = samples.map((s) => s.offset);
     const average =
       offsets.reduce((sum, offset) => sum + offset, 0) / offsets.length;
     return {
       ...fused,
+      networkUncertainty,
+      upstreamUncertainty,
+      upstream: samples.at(-1)?.upstream ?? null,
       endpoint,
       measuredAt,
       rtt: Math.min(...samples.map((s) => s.rtt)),
@@ -213,13 +223,28 @@ export class AtomicClockSync extends EventTarget {
       )
     )
       throw new Error("Invalid timestamp");
-    return timingSample({
-      sent,
-      received,
-      serverReceived,
-      serverSent,
-      resolution: this.resolution,
-    });
+    if (
+      endpoint.upstream &&
+      (data.source?.name !== "time.cloudflare.com" ||
+        data.source?.protocol !== "NTP" ||
+        !Number.isFinite(data.source?.uncertaintyMs) ||
+        data.source.uncertaintyMs < 0 ||
+        data.source.uncertaintyMs > 3000 ||
+        !Number.isFinite(data.source?.ageMs) ||
+        data.source.ageMs < 0 ||
+        data.source.ageMs > 65_000)
+    )
+      throw new Error("Invalid upstream reference");
+    return {
+      ...timingSample({
+        sent,
+        received,
+        serverReceived,
+        serverSent,
+        resolution: this.resolution,
+      }),
+      upstream: endpoint.upstream ? data.source : null,
+    };
   }
 
   nowMs() {
@@ -251,7 +276,9 @@ export class AtomicClockSync extends EventTarget {
       uncertainty,
       offsetUncertainty:
         uncertainty === null ? null : uncertainty + this.wallResolution,
-      networkUncertainty: this.reference?.uncertainty ?? null,
+      networkUncertainty: this.reference?.networkUncertainty ?? null,
+      upstreamUncertainty: this.reference?.upstreamUncertainty ?? null,
+      upstream: this.reference?.upstream ?? null,
       driftAllowance: age === null ? null : age * DRIFT_MS_PER_MS,
       age,
       endpoint: this.reference?.endpoint,

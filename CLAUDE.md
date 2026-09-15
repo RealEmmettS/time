@@ -1,6 +1,6 @@
 # Repository guidance
 
-ATOMIC TIME is a vanilla JavaScript/Vite website with a Vercel Edge time endpoint.
+ATOMIC TIME is a vanilla JavaScript/Vite website with a Vercel Node.js time endpoint.
 
 ## Checks
 
@@ -18,7 +18,9 @@ ATOMIC TIME is a vanilla JavaScript/Vite website with a Vercel Edge time endpoin
 - `src/diagnostics.js`: plain-language status interpretation.
 - `src/clock-display.js`: DOM binding, diagnostics and Pretext responsive sizing.
 - `src/main.js`: startup and browser lifecycle; `src/timezone.js`: existing timezone behavior.
-- `api/time.js`: versioned handler timestamps with legacy timestamp compatibility.
+- `api/time.js`: Cloudflare-referenced handler timestamps with legacy timestamp compatibility.
+- `server/ntp.js` and `server/reference-clock.js`: bounded NTP client, packet validation, cached monotonic upstream reference, uncertainty propagation.
+- `src/clock-help.js`: local OS detection and platform-specific setup instructions.
 
 Read METHODOLOGY.md before changing timing behavior. Keep clock correctness independent of `Date.now()` after synchronization. Do not describe network intervals or timestamp resolution as absolute UTC accuracy. Never query time.gov's private timestamp endpoints.
 

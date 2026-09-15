@@ -87,7 +87,9 @@
           <h3>For setting a watch</h3>
           <p id="diagnostic-watch"></p>
           <dl>
-            <dt>Network timing uncertainty</dt>
+            <dt>Estimated timing range</dt>
+            <dd id="diagnostic-total"></dd>
+            <dt>Browser-to-server timing range</dt>
             <dd id="diagnostic-range"></dd>
             <dt>Last successful measurement</dt>
             <dd id="diagnostic-age"></dd>
@@ -95,9 +97,23 @@
             <dd id="diagnostic-agreement"></dd>
           </dl>
           <button id="sync-recheck" type="button">Check again</button>
+          <details id="clock-help">
+            <summary>Fix your computer clock</summary>
+            <label for="clock-help-platform">Instructions for</label>
+            <select id="clock-help-platform">
+              <option value="windows">Windows</option>
+              <option value="macos">macOS</option>
+              <option value="linux">Linux</option>
+              <option value="mobile">Mobile device</option>
+              <option value="unknown">Choose a system</option>
+            </select>
+            <div id="clock-help-content"></div>
+          </details>
           <details>
             <summary>Measurement details</summary>
             <dl>
+              <dt>Upstream reference</dt>
+              <dd id="diagnostic-upstream"></dd>
               <dt>Selected source</dt>
               <dd id="diagnostic-source"></dd>
               <dt>Computer clock difference</dt>

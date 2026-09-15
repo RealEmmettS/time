@@ -13,6 +13,7 @@ import {
 } from "./timezone.js";
 import { SecondScheduler } from "./second-scheduler.js";
 import { describeClock, duration } from "./diagnostics.js";
+import { mountClockHelp } from "./clock-help.js";
 import { prepareWithSegments, walkLineRanges } from "@chenglou/pretext";
 
 export class ClockDisplay {
@@ -48,6 +49,8 @@ export class ClockDisplay {
       statusTooltip: document.getElementById("sync-tooltip-text"),
       toggle: document.getElementById("toggle-24"),
     };
+
+    mountClockHelp(document, navigator);
 
     // 12/24 toggle
     if (this.els.toggle) {
@@ -202,7 +205,7 @@ export class ClockDisplay {
     set(
       "sync-rtt",
       info.hasReference
-        ? `Network range ±${duration(info.networkUncertainty)}`
+        ? `Estimated range ±${duration(info.uncertainty)}`
         : "Waiting for a time reference",
     );
     set(
@@ -251,6 +254,18 @@ export class ClockDisplay {
     );
     set("diagnostic-agreement", copy.agreement);
     set("diagnostic-source", info.endpoint?.name || "None");
+    set(
+      "diagnostic-upstream",
+      info.upstream
+        ? `time.cloudflare.com · ±${duration(info.upstreamUncertainty)} upstream range, including NTP path and reported root uncertainty`
+        : "No measured upstream range is available for this source.",
+    );
+    set(
+      "diagnostic-total",
+      info.hasReference
+        ? `±${duration(info.uncertainty)} including measured transfer ranges and drift allowance`
+        : "Not measured",
+    );
     set("diagnostic-rtt", duration(info.rtt));
     set("diagnostic-jitter", duration(info.jitter));
     set(

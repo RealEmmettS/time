@@ -7,11 +7,12 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - Corrected reference time advances from a monotonic clock; system clock changes update the diagnosis separately.
-- Extended the existing Vercel endpoint with correlated entry/response timestamps and no-store CDN headers.
+- Extended the existing Vercel endpoint with Cloudflare NTP-referenced entry/response timestamps, measured upstream uncertainty, and no-store CDN headers. The endpoint uses the Node.js runtime for outbound UDP.
 - Replaced incorrect interval selection with unique strict-majority intersection, quantization floors, source cross-checks and explicit conflict/stale states.
 - Refresh every minute while visible; revalidate on resume, reconnect and clock discontinuity, with in-flight generation protection.
 - Align visible ticks to corrected second boundaries and foreground frames; skip delayed callbacks without accumulating drift.
 - Replaced analogy tiers with a clear computer-clock summary, watch guidance, accessible measurement details and manual recheck.
+- Added OS detection and Windows/macOS/Linux clock setup guidance with a manual platform selector.
 - Removed unsupported atomic-precision and hosting-accuracy claims; documented source, oscillator and display limitations.
 
 ### Added

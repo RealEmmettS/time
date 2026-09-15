@@ -10,7 +10,7 @@ import {
 } from "../src/timing.js";
 import { AtomicClockSync } from "../src/atomic-sync.js";
 import { describeClock } from "../src/diagnostics.js";
-import { GET } from "../api/time.js";
+import { createTimeHandler } from "../server/reference-clock.js";
 
 const intervals = (pairs) =>
   pairs.map(([lower, upper]) => ({ lower, upper, resolution: 0.01 }));
@@ -370,16 +370,56 @@ test("continuity detects OS steps and suspend with either timer behavior", async
     assert.equal(clock.status, "synced");
   }
 });
-test("API returns versioned correlated uncached timestamps and legacy field", async () => {
-  const response = GET(
+test("API returns versioned correlated uncached Cloudflare timestamps and legacy field", async () => {
+  const GET = createTimeHandler({
+    now: () => 10,
+    get: async () => ({
+      offset: 1_700_000_000_000,
+      uncertainty: 5,
+      measuredAt: 10,
+      delay: 4,
+      rootDelay: 2,
+      rootDispersion: 1,
+      stratum: 3,
+      leap: 0,
+    }),
+  });
+  const response = await GET(
     new Request("https://tikset.com/api/time?requestId=test-123"),
   );
   const data = await response.json();
   assert.equal(data.version, 1);
   assert.equal(data.requestId, "test-123");
   assert.equal(data.timestamp, data.sentAt);
+  assert.equal(data.source.name, "time.cloudflare.com");
+  assert.equal(data.source.uncertaintyMs, 5);
   assert.ok(data.receivedAt <= data.sentAt);
   assert.match(response.headers.get("cache-control"), /no-store/);
   assert.equal(response.headers.get("vercel-cdn-cache-control"), "no-store");
-  assert.equal((await GET().json()).requestId, null);
+  assert.equal((await (await GET()).json()).requestId, null);
+});
+
+test("upstream uncertainty is retained after browser sample fusion", async () => {
+  const { clock, endpoints } = fixture({
+    mutate: (data) => ({
+      ...data,
+      source: {
+        name: "time.cloudflare.com",
+        protocol: "NTP",
+        uncertaintyMs: 15,
+        ageMs: 100,
+      },
+    }),
+  });
+  endpoints[0].upstream = true;
+  await clock.sync();
+  const info = clock.getStatus();
+  assert.equal(info.upstreamUncertainty, 15);
+  assert.ok(info.uncertainty >= info.networkUncertainty + 15);
+});
+test("missing upstream metadata rejects the Cloudflare endpoint", async () => {
+  const { clock, endpoints } = fixture();
+  endpoints[0].upstream = true;
+  await clock.sync();
+  assert.equal(clock.getStatus().endpoint.name, "source1");
 });

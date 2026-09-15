@@ -289,3 +289,35 @@
     font-size: clamp(10rem, 16vw, 22rem);
   }
 }
+
+/* Optional local-clock help, shown for one operating system at a time. */
+#clock-help label {
+  display: block;
+  margin-top: 0.75rem;
+}
+#clock-help select {
+  width: 100%;
+  border: 1px solid #2d2f2f;
+  background: white;
+  padding: 0.5rem;
+  margin-top: 0.25rem;
+}
+#clock-help ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+#clock-help li {
+  margin-top: 0.75rem;
+}
+#clock-help pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 0.75rem;
+  background: #f6f6f6;
+  margin-top: 0.5rem;
+}
+#clock-help a {
+  display: block;
+  text-decoration: underline;
+  margin-top: 0.5rem;
+}
