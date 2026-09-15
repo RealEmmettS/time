@@ -25,7 +25,10 @@ jobs:
         run: npm ci
 
       - name: Check formatting (Prettier)
-        run: npx prettier --check "src/**/*.{js,css}" "api/**/*.js" index.html
+        run: npm run check
+
+      - name: Timing and recovery tests
+        run: npm test
 
       - name: Build
         run: npm run build

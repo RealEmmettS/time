@@ -1,13 +1,15 @@
 {
   "name": "atomic-time",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
-  "description": "A beautiful, responsive atomic clock web app — an alternative to time.gov",
+  "description": "Network-corrected time for setting watches and checking computer clocks",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test",
+    "check": "prettier --check \"src/**/*.{js,css}\" \"api/**/*.js\" \"server/**/*.js\" \"tests/**/*.js\" \"scripts/**/*.mjs\" index.html"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",

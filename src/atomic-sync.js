@@ -1,336 +1,351 @@
 // Copyright QubeTX — tikset.com
 
-/**
- * AtomicClockSync — Synchronizes browser clock with atomic time via HTTPS APIs.
- *
- * Multi-sample sync with IQR outlier filtering and Marzullo's interval fusion
- * algorithm (same family as NTP's intersection algorithm).
- *
- * Endpoint priority:
- *   1. Self-hosted Vercel Edge Function (same-origin, ~5-20ms RTT)
- *   2. time.now/developer API (BunnyCDN, ~63ms RTT, microsecond precision)
- *   3. timeapi.io (NTP-synced, ~146ms RTT, proven reliable)
- *
- * Achievable accuracy: ~3-30ms depending on endpoint and network conditions.
- */
+import {
+  CROSS_CHECK_MS,
+  DRIFT_MS_PER_MS,
+  FRESH_MS,
+  fuseIntervals,
+  intervalsAgree,
+  parseUtc,
+  timerResolution,
+  timingSample,
+} from "./timing.js";
 
-const ENDPOINTS = [
+export const ENDPOINTS = [
   {
-    name: "Vercel Edge",
-    label: "Vercel Edge (NTP-synced)",
+    name: "Cloudflare via Vercel",
     url: "/api/time",
-    parseTimestamp: (data) => data.timestamp,
+    protocol: true,
+    upstream: true,
   },
   {
     name: "time.now",
-    label: "Atomic Time API (time.now)",
     url: "https://time.now/developer/api/timezone/Etc/UTC",
-    parseTimestamp: (data) => new Date(data.utc_datetime).getTime(),
+    parse: (data) => parseUtc(data.utc_datetime),
   },
   {
     name: "timeapi.io",
-    label: "NTP Server (timeapi.io)",
     url: "https://timeapi.io/api/time/current/zone?timeZone=UTC",
-    parseTimestamp: (data) => new Date(data.dateTime + "Z").getTime(),
+    parse: (data) => parseUtc(data.dateTime?.replace(/Z$/, "") + "Z"),
   },
 ];
 
-// ─── Statistical Helpers ────────────────────────────────────
-
-/**
- * IQR-based outlier filter. Removes samples with RTT above Q3 + 1.5 * IQR.
- * Returns the filtered subset (at least 2 samples preserved).
- */
-function filterOutliers(samples) {
-  if (samples.length < 4) return samples;
-
-  const sorted = [...samples].sort((a, b) => a.rtt - b.rtt);
-  const q1Idx = Math.floor(sorted.length * 0.25);
-  const q3Idx = Math.floor(sorted.length * 0.75);
-  const q1 = sorted[q1Idx].rtt;
-  const q3 = sorted[q3Idx].rtt;
-  const iqr = q3 - q1;
-  const upperFence = q3 + 1.5 * iqr;
-
-  const filtered = sorted.filter((s) => s.rtt <= upperFence);
-  // Preserve at least 2 samples even if filtering is aggressive
-  return filtered.length >= 2
-    ? filtered
-    : sorted.slice(0, Math.max(2, Math.ceil(sorted.length / 2)));
-}
-
-/**
- * Marzullo's algorithm — finds the tightest time interval consistent with
- * the maximum number of overlapping confidence intervals.
- *
- * Each sample produces an interval: [offset - rtt/2, offset + rtt/2]
- * The algorithm sweeps left-to-right to find the densest overlap region.
- *
- * Returns { offset, uncertainty } where:
- *   offset = midpoint of the densest intersection
- *   uncertainty = half-width of that intersection (tighter than any single RTT/2)
- */
-function marzullo(samples) {
-  if (samples.length === 0) return null;
-  if (samples.length === 1) {
-    return { offset: samples[0].offset, uncertainty: samples[0].rtt / 2 };
-  }
-
-  // Build endpoint events: +1 for interval start, -1 for interval end
-  const events = [];
-  for (const s of samples) {
-    const halfRtt = s.rtt / 2;
-    events.push({ time: s.offset - halfRtt, delta: 1 });
-    events.push({ time: s.offset + halfRtt, delta: -1 });
-  }
-
-  // Sort: by time ascending; starts (+1) before ends (-1) at same time
-  events.sort((a, b) => a.time - b.time || b.delta - a.delta);
-
-  // Sweep to find the region with maximum overlap
-  let current = 0;
-  let maxOverlap = 0;
-  let bestStart = 0;
-  let bestEnd = 0;
-  let regionStart = 0;
-
-  for (const event of events) {
-    current += event.delta;
-    if (current > maxOverlap) {
-      maxOverlap = current;
-      regionStart = event.time;
-    } else if (current < maxOverlap && maxOverlap > 0) {
-      // Just exited a max-overlap region — record it if it's the first
-      if (bestStart === 0 && bestEnd === 0) {
-        bestStart = regionStart;
-        bestEnd = event.time;
-      }
-    }
-  }
-
-  // If no clear region found (shouldn't happen), fall back to the region we tracked
-  if (bestStart === 0 && bestEnd === 0) {
-    bestStart = regionStart;
-    // Find the end of the max-overlap region
-    current = 0;
-    for (const event of events) {
-      current += event.delta;
-      if (current === maxOverlap) {
-        bestStart = event.time;
-      } else if (current < maxOverlap && bestStart !== 0) {
-        bestEnd = event.time;
-        break;
-      }
-    }
-  }
-
-  // If still degenerate, fall back to min-RTT sample
-  if (bestEnd <= bestStart) {
-    const best = samples.reduce((a, b) => (a.rtt < b.rtt ? a : b));
-    return { offset: best.offset, uncertainty: best.rtt / 2 };
-  }
-
-  return {
-    offset: (bestStart + bestEnd) / 2,
-    uncertainty: (bestEnd - bestStart) / 2,
-  };
-}
-
-// ─── Main Class ─────────────────────────────────────────────
-
 export class AtomicClockSync extends EventTarget {
-  constructor() {
+  constructor({
+    monotonic = () => performance.now(),
+    wall = () => Date.now(),
+    fetcher = (...args) => fetch(...args),
+    sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    endpoints = ENDPOINTS,
+    resolution,
+    wallResolution,
+  } = {}) {
     super();
-    this.offset = 0;
-    this.uncertainty = 0;
-    this.lastSync = 0;
-    this.lastRtt = 0;
-    this.status = "idle"; // idle | syncing | synced | error
+    this.monotonic = monotonic;
+    this.wall = wall;
+    this.fetcher = fetcher;
+    this.sleep = sleep;
+    this.endpoints = endpoints;
+    this.resolution = resolution ?? timerResolution(monotonic);
+    this.wallResolution = wallResolution ?? timerResolution(wall);
+    this.reference = null;
+    this.status = "idle";
+    this.issue = "";
+    this.checks = [];
+    this.agreement = "unchecked";
+    this._lastCrossCheck = -Infinity;
+    this._generation = 0;
+    this._sequence = 0;
+    this._inFlight = null;
     this._timer = null;
-    this._activeEndpoint = ENDPOINTS[0];
+    this._probe = { mono: monotonic(), wall: wall() };
   }
 
-  /**
-   * Perform a multi-sample sync with IQR filtering and Marzullo fusion.
-   * Tries each endpoint in priority order until one succeeds.
-   * @param {number} samples — Number of samples per endpoint attempt
-   * @returns {Promise<{offset: number, rtt: number, uncertainty: number, confidence: string, endpoint: object}>}
-   */
-  async sync(samples = 8) {
+  sync({ crossCheck = false } = {}) {
+    if (this._inFlight) {
+      if (crossCheck && !this._runningCrossCheck) this._queuedCrossCheck = true;
+      return this._inFlight;
+    }
+    this._runningCrossCheck =
+      crossCheck ||
+      this.monotonic() - this._lastCrossCheck >= CROSS_CHECK_MS ||
+      this.agreement === "disagree";
+    const generation = this._generation;
     this._setStatus("syncing");
-
-    for (const endpoint of ENDPOINTS) {
-      try {
-        const result = await this._syncEndpoint(endpoint, samples);
-        if (result) {
-          this._activeEndpoint = endpoint;
-          this.offset = result.offset;
-          this.uncertainty = result.uncertainty;
-          this.lastRtt = result.rtt;
-          this.lastSync = Date.now();
-          this._setStatus("synced");
-
-          const confidence = this._assessConfidence(result.rtt);
-          const syncResult = {
-            offset: Math.round(result.offset * 100) / 100,
-            rtt: Math.round(result.rtt * 100) / 100,
-            uncertainty: Math.round(result.uncertainty * 100) / 100,
-            samplesUsed: result.samplesUsed,
-            confidence,
-            endpoint,
-          };
-
-          console.log(
-            `[AtomicSync] Synced via ${endpoint.name}: offset=${syncResult.offset}ms, RTT=${syncResult.rtt}ms, uncertainty=±${syncResult.uncertainty}ms, samples=${syncResult.samplesUsed}, confidence=${confidence}`,
-          );
-
-          return syncResult;
-        }
-      } catch (e) {
-        console.warn(`[AtomicSync] ${endpoint.name} failed:`, e.message);
+    this._inFlight = this._synchronize(
+      this._runningCrossCheck,
+      generation,
+    ).finally(() => {
+      this._inFlight = null;
+      if (this._queuedCrossCheck) {
+        this._queuedCrossCheck = false;
+        return this.sync({ crossCheck: true });
       }
-    }
-
-    this._setStatus("error");
-    throw new Error("All sync endpoints failed");
+    });
+    return this._inFlight;
   }
 
-  /**
-   * Sync against a single endpoint: warm → sample → filter → fuse.
-   */
-  async _syncEndpoint(endpoint, sampleCount) {
-    // Phase 1: Connection pre-warming (throwaway fetch)
-    try {
-      const warmUrl = `${endpoint.url}${endpoint.url.includes("?") ? "&" : "?"}_w=${Date.now()}`;
-      await fetch(warmUrl, {
-        cache: "no-store",
-        signal: AbortSignal.timeout(5000),
-      });
-    } catch {
-      // Warm-up failed — endpoint is likely down
-      return null;
-    }
-
-    // Phase 2: Collect samples on warm connection
-    const results = [];
-    for (let i = 0; i < sampleCount; i++) {
+  async _synchronize(crossCheck, generation) {
+    const started = this.monotonic();
+    const reports = [];
+    let candidate = null;
+    for (const endpoint of this.endpoints) {
+      if (generation !== this._generation) return;
+      // Eight reference samples, two per comparison source. Sequential to avoid contention.
+      if (candidate && !crossCheck) break;
       try {
-        const result = await this._sample(endpoint);
-        results.push(result);
-      } catch (e) {
-        console.warn(
-          `[AtomicSync] ${endpoint.name} sample ${i + 1} failed:`,
-          e.message,
-        );
-        // If first real sample fails after warm-up, endpoint is flaky
-        if (i === 0 && results.length === 0) return null;
-      }
-
-      // Short delay between samples (50ms, down from 200ms)
-      if (i < sampleCount - 1) {
-        await new Promise((r) => setTimeout(r, 50));
+        const report = await this._syncEndpoint(endpoint, candidate ? 2 : 8);
+        reports.push(report);
+        candidate ||= report;
+      } catch (error) {
+        reports.push({ endpoint, error: error.message });
       }
     }
+    if (generation !== this._generation) return;
+    const now = this.monotonic();
+    if (crossCheck) {
+      this.checks = reports;
+      this._lastCrossCheck = now;
+    }
+    if (!candidate) {
+      this.issue = "No consistent time measurement was available.";
+      this._setStatus(this.reference ? "stale" : "error");
+      return;
+    }
+    const others = this.checks.filter(
+      (r) =>
+        !r.error &&
+        r.endpoint.name !== candidate.endpoint.name &&
+        now - r.measuredAt < CROSS_CHECK_MS,
+    );
+    const comparisons = [candidate, ...others];
+    const disagreement = comparisons.some((a, i) =>
+      comparisons.slice(i + 1).some((b) => !intervalsAgree(a, b, now)),
+    );
+    this.agreement = disagreement
+      ? "disagree"
+      : others.length
+        ? "agree"
+        : "single";
+    if (disagreement) {
+      this.issue =
+        "Time sources disagree. Wait for another check before setting a watch.";
+      this._setStatus("conflict");
+      return;
+    }
+    this.reference = {
+      ...candidate,
+      epoch: candidate.offset + now,
+      anchor: now,
+      duration: now - started,
+    };
+    this.issue = "";
+    this._setStatus("synced");
+    return this.getStatus();
+  }
 
-    if (results.length < 2) return null;
-
-    // Phase 3: IQR outlier filtering
-    const filtered = filterOutliers(results);
-
-    // Phase 4: Marzullo's algorithm for interval fusion
-    const fused = marzullo(filtered);
-    if (!fused) return null;
-
-    // Best RTT for display (from the min-RTT sample in filtered set)
-    const bestRtt = Math.min(...filtered.map((s) => s.rtt));
-
+  async _syncEndpoint(endpoint, count) {
+    // Drain the warm-up body so the connection is reusable.
+    try {
+      await this._sample(endpoint);
+    } catch {
+      /* Real samples decide availability. */
+    }
+    const samples = [];
+    let failed = 0;
+    for (let i = 0; i < count; i++) {
+      try {
+        samples.push(await this._sample(endpoint));
+      } catch {
+        failed++;
+        if (failed >= 2 && samples.length === 0) break;
+      }
+      if (i < count - 1) await this.sleep(50);
+    }
+    const measuredAt = this.monotonic();
+    const aged = samples.map((s) => {
+      const drift = Math.max(0, measuredAt - s.received) * DRIFT_MS_PER_MS;
+      return { ...s, lower: s.lower - drift, upper: s.upper + drift };
+    });
+    const fused = fuseIntervals(aged);
+    if (!fused) throw new Error("Insufficient or conflicting samples");
+    const upstreamUncertainty = Math.max(
+      ...samples.map((s) => s.upstream?.uncertaintyMs || 0),
+    );
+    const networkUncertainty = fused.uncertainty;
+    fused.uncertainty += upstreamUncertainty;
+    fused.lower -= upstreamUncertainty;
+    fused.upper += upstreamUncertainty;
+    const offsets = samples.map((s) => s.offset);
+    const average =
+      offsets.reduce((sum, offset) => sum + offset, 0) / offsets.length;
     return {
-      offset: fused.offset,
-      uncertainty: fused.uncertainty,
-      rtt: bestRtt,
-      samplesUsed: filtered.length,
+      ...fused,
+      networkUncertainty,
+      upstreamUncertainty,
+      upstream: samples.at(-1)?.upstream ?? null,
+      endpoint,
+      measuredAt,
+      rtt: Math.min(...samples.map((s) => s.rtt)),
+      jitter: Math.sqrt(
+        offsets.reduce((sum, offset) => sum + (offset - average) ** 2, 0) /
+          offsets.length,
+      ),
+      samplesTotal: count,
+      samplesRejected: fused.samplesRejected + failed,
     };
   }
 
   async _sample(endpoint) {
-    const t1 = performance.now();
-    const localBefore = Date.now();
-
-    const bustUrl = `${endpoint.url}${endpoint.url.includes("?") ? "&" : "?"}_=${Date.now()}`;
-    const response = await fetch(bustUrl, {
+    const requestId = `t${++this._sequence}-${Math.random().toString(36).slice(2)}`;
+    const url = `${endpoint.url}${endpoint.url.includes("?") ? "&" : "?"}requestId=${requestId}`;
+    const sent = this.monotonic();
+    const response = await this.fetcher(url, {
       cache: "no-store",
       signal: AbortSignal.timeout(3000),
     });
-
-    const t2 = performance.now();
-    const localAfter = Date.now();
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    if (Number(response.headers.get("age")) > 0)
+      throw new Error("Cached timestamp");
+    const body = await response.text();
+    const received = this.monotonic();
+    const data = JSON.parse(body);
+    let serverReceived, serverSent;
+    if (endpoint.protocol) {
+      if (data.version !== 1 || data.requestId !== requestId)
+        throw new Error("Unrecognized or replayed timestamp");
+      serverReceived = data.receivedAt;
+      serverSent = data.sentAt;
+      if (data.timestamp !== serverSent)
+        throw new Error("Inconsistent timestamp");
+    } else {
+      serverReceived = serverSent = endpoint.parse(data);
     }
-
-    const data = await response.json();
-    const serverMs = endpoint.parseTimestamp(data);
-
-    if (!serverMs || isNaN(serverMs)) {
-      throw new Error("Invalid timestamp from server");
-    }
-
-    // High-resolution RTT for sample quality ranking
-    const rtt = t2 - t1;
-    // offset = serverTime - clientMidpoint (Cristian's algorithm)
-    const localMidpoint = (localBefore + localAfter) / 2;
-    const offset = serverMs - localMidpoint;
-
-    return { offset, rtt };
-  }
-
-  _assessConfidence(rtt) {
-    if (rtt < 50) return "high";
-    if (rtt < 150) return "medium";
-    if (rtt < 300) return "fair";
-    return "low";
-  }
-
-  /** Get the current atomic-corrected time. */
-  now() {
-    return new Date(Date.now() + this.offset);
-  }
-
-  /** Get corrected Unix timestamp in milliseconds. */
-  nowMs() {
-    return Date.now() + this.offset;
-  }
-
-  /**
-   * Start periodic re-synchronization.
-   * @param {number} intervalMs — Re-sync interval (default 10 minutes)
-   */
-  startAutoSync(intervalMs = 600_000) {
-    this.sync().catch(() => {}); // Initial sync
-    this._timer = setInterval(() => {
-      this.sync().catch(() => {});
-    }, intervalMs);
-  }
-
-  stopAutoSync() {
-    if (this._timer) {
-      clearInterval(this._timer);
-      this._timer = null;
-    }
-  }
-
-  getStatus() {
+    // The local wall clock may be wrong by days or years; do not validate against it.
+    if (
+      ![serverReceived, serverSent].every(
+        (t) => Number.isFinite(t) && t > 0 && t < 8.64e15,
+      )
+    )
+      throw new Error("Invalid timestamp");
+    if (
+      endpoint.upstream &&
+      (data.source?.name !== "time.cloudflare.com" ||
+        data.source?.protocol !== "NTP" ||
+        !Number.isFinite(data.source?.uncertaintyMs) ||
+        data.source.uncertaintyMs < 0 ||
+        data.source.uncertaintyMs > 3000 ||
+        !Number.isFinite(data.source?.ageMs) ||
+        data.source.ageMs < 0 ||
+        data.source.ageMs > 65_000)
+    )
+      throw new Error("Invalid upstream reference");
     return {
-      status: this.status,
-      offset: Math.round(this.offset * 100) / 100,
-      rtt: Math.round(this.lastRtt * 100) / 100,
-      uncertainty: Math.round(this.uncertainty * 100) / 100,
-      lastSync: this.lastSync,
-      endpoint: this._activeEndpoint,
+      ...timingSample({
+        sent,
+        received,
+        serverReceived,
+        serverSent,
+        resolution: this.resolution,
+      }),
+      upstream: endpoint.upstream ? data.source : null,
     };
   }
 
+  nowMs() {
+    return this.reference
+      ? this.reference.epoch + this.monotonic() - this.reference.anchor
+      : this.wall();
+  }
+  now() {
+    return new Date(this.nowMs());
+  }
+
+  getStatus() {
+    const mono = this.monotonic();
+    const age = this.reference
+      ? Math.max(0, mono - this.reference.measuredAt)
+      : null;
+    const uncertainty = this.reference
+      ? this.reference.uncertainty + age * DRIFT_MS_PER_MS
+      : null;
+    const status =
+      this.status === "synced" && age > FRESH_MS ? "stale" : this.status;
+    const recentChecks = this.checks.filter(
+      (r) => !r.error && mono - r.measuredAt < CROSS_CHECK_MS,
+    );
+    return {
+      status,
+      hasReference: !!this.reference,
+      offset: this.reference ? this.nowMs() - this.wall() : null,
+      uncertainty,
+      offsetUncertainty:
+        uncertainty === null ? null : uncertainty + this.wallResolution,
+      networkUncertainty: this.reference?.networkUncertainty ?? null,
+      upstreamUncertainty: this.reference?.upstreamUncertainty ?? null,
+      upstream: this.reference?.upstream ?? null,
+      driftAllowance: age === null ? null : age * DRIFT_MS_PER_MS,
+      age,
+      endpoint: this.reference?.endpoint,
+      rtt: this.reference?.rtt,
+      jitter: this.reference?.jitter,
+      samplesUsed: this.reference?.samplesUsed,
+      samplesTotal: this.reference?.samplesTotal,
+      samplesRejected: this.reference?.samplesRejected,
+      duration: this.reference?.duration,
+      resolution: this.resolution,
+      wallResolution: this.wallResolution,
+      agreement:
+        this.agreement === "agree" && recentChecks.length < 2
+          ? "single"
+          : this.agreement,
+      checks: this.checks,
+      issue: this.issue,
+    };
+  }
+
+  checkContinuity() {
+    const current = { mono: this.monotonic(), wall: this.wall() };
+    const elapsed = current.mono - this._probe.mono;
+    const wallElapsed = current.wall - this._probe.wall;
+    this._probe = current;
+    if (
+      elapsed < 0 ||
+      elapsed > 5000 ||
+      Math.abs(wallElapsed - elapsed) > Math.max(20, 2 * this.wallResolution)
+    ) {
+      this.invalidate(
+        "Clock change or interrupted timing detected. Checking again.",
+      );
+      this.sync({ crossCheck: true });
+      return true;
+    }
+    return false;
+  }
+
+  invalidate(reason) {
+    this._generation++;
+    this.issue = reason;
+    this._lastCrossCheck = -Infinity;
+    if (this._inFlight) this._queuedCrossCheck = true;
+    this._setStatus(this.reference ? "stale" : "idle");
+  }
+
+  startAutoSync(intervalMs = 60_000) {
+    this.stopAutoSync();
+    this.sync({ crossCheck: true });
+    this._timer = setInterval(() => {
+      if (
+        typeof document === "undefined" ||
+        document.visibilityState === "visible"
+      )
+        this.sync();
+    }, intervalMs);
+  }
+  stopAutoSync() {
+    if (this._timer !== null) clearInterval(this._timer);
+    this._timer = null;
+  }
   _setStatus(status) {
     this.status = status;
     this.dispatchEvent(new CustomEvent("statuschange", { detail: { status } }));
