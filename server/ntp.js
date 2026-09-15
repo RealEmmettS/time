@@ -72,11 +72,14 @@ export function parseReply(packet, request, { sent, received, nearUnixMs }) {
   };
 }
 
-export function queryCloudflare({
+export function queryNtp({
+  host = "time.cloudflare.com",
   createSocket = () => dgram.createSocket("udp4"),
   monotonic = () => performance.now(),
   wall = () => Date.now(),
 } = {}) {
+  if (!["time.cloudflare.com", "time.nist.gov"].includes(host))
+    return Promise.reject(new Error("Unsupported NTP host"));
   return new Promise((resolve, reject) => {
     const socket = createSocket();
     const request = Buffer.alloc(48);
@@ -114,7 +117,7 @@ export function queryCloudflare({
     });
     // Connected UDP socket restricts replies to the selected Cloudflare peer.
     try {
-      socket.connect(123, "time.cloudflare.com", () => {
+      socket.connect(123, host, () => {
         if (finished) return;
         try {
           sent = monotonic();
@@ -130,3 +133,6 @@ export function queryCloudflare({
     }
   });
 }
+
+// Compatibility export for existing callers and transport tests.
+export const queryCloudflare = (options = {}) => queryNtp(options);

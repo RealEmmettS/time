@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import { createTimeHandler } from "./server/reference-clock.js";
+import { createTimeApi } from "./server/time-api.js";
 
 export default defineConfig({
   root: ".",
@@ -7,7 +7,7 @@ export default defineConfig({
     {
       name: "local-time-api",
       configureServer(server) {
-        const handler = createTimeHandler();
+        const handler = createTimeApi();
         server.middlewares.use(async (req, res, next) => {
           if (req.url?.split("?")[0] !== "/api/time") return next();
           const response = await handler(

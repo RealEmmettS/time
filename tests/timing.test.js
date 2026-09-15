@@ -283,7 +283,7 @@ test("fallback source works and a single source is qualified", async () => {
   assert.match(describeClock(clock.getStatus()).summary, /Relative to source1/);
 });
 test("source conflict on startup does not publish a reference", async () => {
-  const { clock } = fixture({ biases: [0, 1000, 0] });
+  const { clock } = fixture({ biases: [0, 1000, 2000] });
   await clock.sync();
   assert.equal(clock.status, "conflict");
   assert.equal(clock.reference, null);
@@ -293,10 +293,12 @@ test("source conflict retains the prior reference and can recover", async () => 
   await clock.sync();
   const previous = clock.reference;
   state.biases[1] = 1000;
+  state.biases[2] = 2000;
   await clock.sync({ crossCheck: true });
   assert.equal(clock.reference, previous);
   assert.equal(clock.status, "conflict");
   state.biases[1] = 0;
+  state.biases[2] = 0;
   await clock.sync({ crossCheck: true });
   assert.equal(clock.status, "synced");
 });
@@ -424,4 +426,45 @@ test("missing upstream metadata rejects the Cloudflare endpoint", async () => {
   Object.assign(endpoints[0], ENDPOINTS[0]);
   await clock.sync();
   assert.equal(clock.getStatus().endpoint.name, "source1");
+});
+
+test("bad primary is replaced only by a fresh majority with eight reference samples", async () => {
+  const { clock } = fixture({ biases: [1000, 0, 0] });
+  await clock.sync();
+  const info = clock.getStatus();
+  assert.equal(info.status, "synced");
+  assert.notEqual(info.endpoint.name, "source0");
+  assert.equal(info.samplesTotal, 8);
+  assert.deepEqual(info.rejectedSources, ["source0"]);
+});
+test("isolated comparison outlier is disclosed without abandoning a sound reference", async () => {
+  const { clock, endpoints } = fixture({ biases: [0, 1000, 0] });
+  endpoints[0].name = "Cloudflare via Vercel";
+  await clock.sync();
+  assert.equal(clock.getStatus().endpoint.name, "Cloudflare via Vercel");
+  assert.deepEqual(clock.getStatus().rejectedSources, ["source1"]);
+});
+test("an automatic disagreement refreshes votes before replacing the reference", async () => {
+  const { clock, state } = fixture();
+  await clock.sync();
+  state.mono += 60000;
+  state.biases = [1000, 1000, 1000];
+  await clock.sync();
+  assert.equal(clock.getStatus().status, "synced");
+  assert.equal(clock.getStatus().rejectedSources.length, 0);
+  assert.ok(clock.getStatus().checks.every((r) => r.measuredAt > 60000));
+});
+test("active rate correction keeps device steps independent and retains the original uncertainty envelope", async () => {
+  const { clock, state, epoch } = fixture();
+  await clock.sync();
+  clock.reference.rate = 50e-6;
+  state.mono += 60000;
+  assert.ok(Math.abs(clock.nowMs() - (epoch + state.mono + 3)) < 0.01);
+  const corrected = clock.nowMs();
+  state.wallError += 60000;
+  assert.equal(clock.nowMs(), corrected);
+  assert.ok(clock.getStatus().uncertainty >= clock.reference.uncertainty + 9);
+  clock.invalidate("resume");
+  assert.equal(clock.nowMs(), corrected);
+  assert.equal(clock.drift.status().active, false);
 });

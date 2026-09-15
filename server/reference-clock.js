@@ -9,6 +9,8 @@ export function createReferenceClock({
   query = queryCloudflare,
   now = () => performance.now(),
   wall = () => Date.now(),
+  sampleCount = 3,
+  sourceName = "time.cloudflare.com",
 } = {}) {
   let reference = null;
   let pending = null;
@@ -34,7 +36,7 @@ export function createReferenceClock({
       pending = Promise.resolve().then(async () => {
         try {
           const samples = [];
-          for (let i = 0; i < 3; i++) samples.push(await query());
+          for (let i = 0; i < sampleCount; i++) samples.push(await query());
           const at = now();
           const lower = Math.max(
             ...samples.map(
@@ -55,6 +57,7 @@ export function createReferenceClock({
           );
           reference = {
             ...best,
+            sourceName,
             uncertainty:
               best.uncertainty + Math.abs(at - best.measuredAt) * DRIFT,
             measuredAt: at,
@@ -104,7 +107,7 @@ export function createTimeHandler(clock = createReferenceClock()) {
           sentAt,
           timestamp: sentAt,
           source: {
-            name: "time.cloudflare.com",
+            name: reference.sourceName || "time.cloudflare.com",
             protocol: "NTP",
             authenticated: false,
             uncertaintyMs:
@@ -128,7 +131,7 @@ export function createTimeHandler(clock = createReferenceClock()) {
       );
     } catch {
       return Response.json(
-        { error: "Cloudflare time reference unavailable" },
+        { error: "NTP time reference unavailable" },
         { status: 503, headers },
       );
     }

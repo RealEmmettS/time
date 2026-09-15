@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2026-09-15
+
+### Changed
+
+- Added an independent NIST NTP comparison through the existing Vercel backend, cached per instance with one request per refresh and a one-minute polling guard.
+- Select a unique majority of provider intervals, retain Cloudflare preference when supported, disclose isolated outliers, and refuse ambiguous ties. Refresh old comparisons before rejecting a fresh reading; any replacement receives eight fresh samples.
+- Preserve the selected provider's complete uncertainty instead of narrowing it through provider averaging.
+- Added a bounded drift model using monotonic-clock history, interval constraints, and three subsequent prediction checks. Uncertain or inconsistent trends never change clock speed; source changes and interruptions reset learning. The uncertainty envelope includes applied rate correction.
+- Updated diagnostics with dynamic upstream identity, rejected providers, and drift-learning status.
+- Local Vite development runs the same NTP-backed API as production.
+
 ## [0.6.0] - 2026-09-15
 
 ### Changed

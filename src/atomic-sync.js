@@ -5,11 +5,13 @@ import {
   DRIFT_MS_PER_MS,
   FRESH_MS,
   fuseIntervals,
-  intervalsAgree,
   parseUtc,
   timerResolution,
   timingSample,
 } from "./timing.js";
+
+import { selectSources } from "./source-selection.js";
+import { DriftTracker } from "./drift-tracker.js";
 
 export const ENDPOINTS = [
   {
@@ -17,6 +19,12 @@ export const ENDPOINTS = [
     url: "/api/time",
     protocol: true,
     upstream: true,
+  },
+  {
+    name: "NIST via Vercel",
+    url: "/api/time?source=nist",
+    protocol: true,
+    upstream: "time.nist.gov",
   },
   {
     name: "time.now",
@@ -49,6 +57,8 @@ export class AtomicClockSync extends EventTarget {
     this.resolution = resolution ?? timerResolution(monotonic);
     this.wallResolution = wallResolution ?? timerResolution(wall);
     this.reference = null;
+    this.drift = new DriftTracker();
+    this.rejectedSources = [];
     this.status = "idle";
     this.issue = "";
     this.checks = [];
@@ -96,47 +106,90 @@ export class AtomicClockSync extends EventTarget {
       try {
         const report = await this._syncEndpoint(endpoint, candidate ? 2 : 8);
         reports.push(report);
-        candidate ||= report;
+        if (!endpoint.observeOnly) candidate ||= report;
       } catch (error) {
         reports.push({ endpoint, error: error.message });
       }
     }
     if (generation !== this._generation) return;
-    const now = this.monotonic();
+    let now = this.monotonic();
     if (crossCheck) {
       this.checks = reports;
       this._lastCrossCheck = now;
     }
     if (!candidate) {
+      this._resetDrift();
       this.issue = "No consistent time measurement was available.";
       this._setStatus(this.reference ? "stale" : "error");
       return;
     }
-    const others = this.checks.filter(
-      (r) =>
-        !r.error &&
-        r.endpoint.name !== candidate.endpoint.name &&
-        now - r.measuredAt < CROSS_CHECK_MS,
-    );
-    const comparisons = [candidate, ...others];
-    const disagreement = comparisons.some((a, i) =>
-      comparisons.slice(i + 1).some((b) => !intervalsAgree(a, b, now)),
-    );
-    this.agreement = disagreement
-      ? "disagree"
-      : others.length
-        ? "agree"
-        : "single";
-    if (disagreement) {
+    let comparisons = [
+      ...reports,
+      ...this.checks.filter(
+        (r) =>
+          !reports.some(
+            (current) => current.endpoint.name === r.endpoint.name,
+          ) && now - r.measuredAt < CROSS_CHECK_MS,
+      ),
+    ];
+    let selection = selectSources(comparisons, now);
+    // Refresh the other providers before letting old votes reject a fresh measurement.
+    if (!crossCheck && (!selection || selection.rejected.length)) {
+      this._runningCrossCheck = true;
+      return this._synchronize(true, generation);
+    }
+    // A selected cross-check needs eight fresh samples before becoming the reference.
+    for (
+      let attempts = 0;
+      selection && attempts < this.endpoints.length;
+      attempts++
+    ) {
+      const chosen = selection.selected;
+      if (reports.includes(chosen) && chosen.samplesTotal === 8) break;
+      let refined;
+      try {
+        refined = await this._syncEndpoint(chosen.endpoint, 8);
+      } catch (error) {
+        refined = { endpoint: chosen.endpoint, error: error.message };
+      }
+      if (generation !== this._generation) return;
+      reports.push(refined);
+      comparisons = comparisons.map((r) =>
+        r.endpoint.name === chosen.endpoint.name ? refined : r,
+      );
+      now = this.monotonic();
+      selection = selectSources(comparisons, now);
+    }
+    if (generation !== this._generation) return;
+    this.checks = comparisons;
+    if (!selection || selection.selected.samplesTotal !== 8) {
+      this._resetDrift();
+      this.agreement = "disagree";
+      this.rejectedSources = [];
       this.issue =
-        "Time sources disagree. Wait for another check before setting a watch.";
+        "Time sources disagree without a unique majority. Wait for another check before setting a watch.";
       this._setStatus("conflict");
       return;
     }
+    candidate = selection.selected;
+    this.rejectedSources = selection.rejected.map((r) => r.endpoint.name);
+    this.agreement = selection.members.length > 1 ? "agree" : "single";
+    const driftModel = this.drift.add({
+      at: candidate.measuredAt,
+      offset: candidate.offset,
+      uncertainty: candidate.uncertainty,
+      source: candidate.endpoint.name,
+      supported: selection.members.length > 1 && !selection.rejected.length,
+    });
     this.reference = {
       ...candidate,
-      epoch: candidate.offset + now,
+      uncertainty:
+        candidate.uncertainty +
+        Math.abs((now - candidate.measuredAt) * driftModel.rate),
+      epoch:
+        candidate.offset + now + (now - candidate.measuredAt) * driftModel.rate,
       anchor: now,
+      rate: driftModel.rate,
       duration: now - started,
     };
     this.issue = "";
@@ -230,7 +283,10 @@ export class AtomicClockSync extends EventTarget {
       throw new Error("Invalid timestamp");
     if (
       endpoint.upstream &&
-      (data.source?.name !== "time.cloudflare.com" ||
+      (data.source?.name !==
+        (typeof endpoint.upstream === "string"
+          ? endpoint.upstream
+          : "time.cloudflare.com") ||
         data.source?.protocol !== "NTP" ||
         !Number.isFinite(data.source?.uncertaintyMs) ||
         data.source.uncertaintyMs < 0 ||
@@ -254,8 +310,19 @@ export class AtomicClockSync extends EventTarget {
 
   nowMs() {
     return this.reference
-      ? this.reference.epoch + this.monotonic() - this.reference.anchor
+      ? this.reference.epoch +
+          this.monotonic() -
+          this.reference.anchor +
+          this._driftCorrection()
       : this.wall();
+  }
+  _driftCorrection() {
+    return this.reference
+      ? Math.min(
+          FRESH_MS,
+          Math.max(0, this.monotonic() - this.reference.anchor),
+        ) * (this.reference.rate || 0)
+      : 0;
   }
   now() {
     return new Date(this.nowMs());
@@ -267,7 +334,9 @@ export class AtomicClockSync extends EventTarget {
       ? Math.max(0, mono - this.reference.measuredAt)
       : null;
     const uncertainty = this.reference
-      ? this.reference.uncertainty + age * DRIFT_MS_PER_MS
+      ? this.reference.uncertainty +
+        age * DRIFT_MS_PER_MS +
+        Math.abs(this._driftCorrection())
       : null;
     const status =
       this.status === "synced" && age > FRESH_MS ? "stale" : this.status;
@@ -284,7 +353,12 @@ export class AtomicClockSync extends EventTarget {
       networkUncertainty: this.reference?.networkUncertainty ?? null,
       upstreamUncertainty: this.reference?.upstreamUncertainty ?? null,
       upstream: this.reference?.upstream ?? null,
-      driftAllowance: age === null ? null : age * DRIFT_MS_PER_MS,
+      driftAllowance:
+        age === null
+          ? null
+          : age * DRIFT_MS_PER_MS + Math.abs(this._driftCorrection()),
+      drift: this.drift.status(),
+      rejectedSources: this.rejectedSources,
       age,
       endpoint: this.reference?.endpoint,
       rtt: this.reference?.rtt,
@@ -323,7 +397,18 @@ export class AtomicClockSync extends EventTarget {
     return false;
   }
 
+  _resetDrift() {
+    this.drift.reset();
+    if (this.reference) {
+      const correction = this._driftCorrection();
+      this.reference.epoch += correction;
+      this.reference.uncertainty += Math.abs(correction);
+      this.reference.rate = 0;
+    }
+  }
+
   invalidate(reason) {
+    this._resetDrift();
     this._generation++;
     this.issue = reason;
     this._lastCrossCheck = -Infinity;
