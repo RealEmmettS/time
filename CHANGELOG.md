@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.3] - 2026-10-10
+
+### Changed
+
+- Use the animated SHAUGHV brandmark from cdn.shaughv.com in the footer, with a static fallback and support for reduced motion.
+
 ## [0.7.2] - 2026-10-10
 
 ### Changed
