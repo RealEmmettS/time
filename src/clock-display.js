@@ -221,7 +221,7 @@ export class ClockDisplay {
       info.hasReference
         ? copy.fresh
           ? "Corrected time displayed."
-          : "Previous reference · recheck needed"
+          : "Recheck Needed."
         : "Uncorrected device time below",
     );
     this.els.statusDot.classList.remove(
