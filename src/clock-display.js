@@ -44,7 +44,6 @@ export class ClockDisplay {
       statusDot: document.getElementById("sync-dot"),
       statusText: document.getElementById("sync-text"),
       statusSource: document.getElementById("sync-source"),
-      statusRtt: document.getElementById("sync-rtt"),
       statusOffset: document.getElementById("sync-offset"),
       statusTooltip: document.getElementById("sync-tooltip-text"),
       toggle: document.getElementById("toggle-24"),
@@ -215,20 +214,14 @@ export class ClockDisplay {
       "sync-source",
       info.status === "syncing"
         ? "Computer clock · checking"
-        : "Computer clock · details",
-    );
-    set(
-      "sync-rtt",
-      info.hasReference
-        ? `Estimated range ±${duration(info.uncertainty)}`
-        : "Waiting for a time reference",
+        : "Computer clock",
     );
     set(
       "sync-offset",
       info.hasReference
         ? copy.fresh
-          ? "Corrected time below"
-          : "Previous reference · recheck needed"
+          ? "Corrected time displayed."
+          : "Recheck Needed."
         : "Uncorrected device time below",
     );
     this.els.statusDot.classList.remove(
@@ -346,7 +339,6 @@ export class ClockDisplay {
     const texts = [
       this.els.statusText?.textContent,
       this.els.statusSource?.textContent,
-      this.els.statusRtt?.textContent,
       this.els.statusOffset?.textContent,
     ].filter(Boolean);
 
