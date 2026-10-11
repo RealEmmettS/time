@@ -220,7 +220,7 @@ export class ClockDisplay {
       "sync-offset",
       info.hasReference
         ? copy.fresh
-          ? "Corrected time below"
+          ? "Corrected time displayed."
           : "Previous reference · recheck needed"
         : "Uncorrected device time below",
     );
