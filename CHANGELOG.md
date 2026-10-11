@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.1] - 2026-10-10
+
+### Changed
+
+- Use Paper Mono from cdn.shaughv.com for the clock, reference label, and collapsed clock status. Keep the AM/PM and timezone badges, date, and body text in Makira.
+- Tighten letter spacing on the monospace status and reference labels.
+
 ## [0.7.0] - 2026-09-15
 
 ### Changed
