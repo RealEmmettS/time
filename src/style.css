@@ -47,7 +47,8 @@
 
   --font-headline: "Makira", system-ui, sans-serif;
   --font-body: "Makira", system-ui, sans-serif;
-  --font-clock: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "Paper Mono", ui-monospace, monospace;
+  --font-clock: "Paper Mono", ui-monospace, monospace;
 }
 
 /* Dot grid background */
