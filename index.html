@@ -229,13 +229,25 @@
         href="https://shaughv.com"
         target="_blank"
         rel="noopener noreferrer"
-        class="opacity-70 hover:opacity-100 transition-opacity"
+        aria-label="SHAUGHV"
+        class="relative block h-10 w-24 md:h-14 shrink-0 opacity-70 hover:opacity-100 transition-opacity"
       >
-        <img
-          src="https://shaughv.s3.us-east-1.amazonaws.com/brandmark/SHAUGHV-Official.svg"
-          alt="SHAUGHV"
-          class="h-10 md:h-14"
-        />
+        <shaughv-mark
+          aria-hidden="true"
+          style="
+            display: block;
+            position: absolute;
+            bottom: 0;
+            width: 96px;
+            height: 64px;
+          "
+        >
+          <img
+            src="https://cdn.shaughv.com/brand/shaughv/logos/SHAUGHV-Official.svg"
+            alt=""
+            class="h-full w-full object-contain"
+          />
+        </shaughv-mark>
       </a>
 
       <label class="flex items-center gap-3 cursor-pointer group">
@@ -256,6 +268,10 @@
       </label>
     </footer>
 
+    <script
+      defer
+      src="https://cdn.shaughv.com/js/animated-brand-mark.js"
+    ></script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
