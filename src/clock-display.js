@@ -215,7 +215,7 @@ export class ClockDisplay {
       "sync-source",
       info.status === "syncing"
         ? "Computer clock · checking"
-        : "Computer clock · details",
+        : "Computer clock",
     );
     set(
       "sync-rtt",
