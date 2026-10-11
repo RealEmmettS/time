@@ -144,6 +144,9 @@
 #sync-btn > div {
   overflow-wrap: anywhere;
 }
+.status-unit {
+  margin-inline-start: 0.12em;
+}
 .diagnostics {
   user-select: text;
 }

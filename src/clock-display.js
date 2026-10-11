@@ -194,8 +194,23 @@ export class ClockDisplay {
       const element = document.getElementById(id);
       if (element && element.textContent !== value) element.textContent = value;
     };
-    const headlineChanged = this.els.statusText.textContent !== copy.headline;
-    set("sync-text", copy.headline);
+    const headlineChanged = this._statusHeadline !== copy.headline;
+    if (headlineChanged) {
+      this._statusHeadline = copy.headline;
+      const measurement = copy.headline.match(/^(\d+(?:\.\d+)?) (ms|s)( .+)$/);
+      if (measurement) {
+        const unit = document.createElement("span");
+        unit.className = "status-unit";
+        unit.textContent = measurement[2];
+        this.els.statusText.replaceChildren(
+          measurement[1],
+          unit,
+          measurement[3],
+        );
+      } else {
+        set("sync-text", copy.headline);
+      }
+    }
     set(
       "sync-source",
       info.status === "syncing"
