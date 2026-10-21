@@ -295,6 +295,15 @@
 }
 
 /* Optional local-clock help, shown for one operating system at a time. */
+#clock-help {
+  --dropdown-accent: var(--color-accent-dark);
+  --dropdown-foreground: var(--color-on-surface);
+  --dropdown-surface: white;
+  --dropdown-radius: 0px;
+  --dropdown-width: 100%;
+  --dropdown-space: 8px;
+}
+
 #clock-help label {
   display: block;
   margin-top: 0.75rem;

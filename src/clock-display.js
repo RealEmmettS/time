@@ -83,7 +83,14 @@ export class ClockDisplay {
     };
     syncBtn.addEventListener("click", () => setOpen(panel.hidden));
     document.addEventListener("click", (event) => {
-      if (!container.contains(event.target)) setOpen(false);
+      // The dropdown's page-rendered menu lives outside the diagnostics panel.
+      const dropdown = container.querySelector('[role="combobox"]');
+      const menuId = dropdown?.getAttribute("aria-controls");
+      const menu = menuId ? document.getElementById(menuId) : null;
+      const path = event.composedPath();
+      if (!path.includes(container) && !path.includes(menu)) {
+        setOpen(false);
+      }
     });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !panel.hidden) {

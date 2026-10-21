@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.4] - 2026-10-21
+
+### Added
+
+- Use the shared CDN cursor with the site's green accent, automatic control outlines, and touch and reduced-motion support.
+- Enhance the clock-help platform selector with the companion dropdown so the cursor remains visible through its menu, using the site's colors and keeping the detected operating system selected.
+
 ## [0.7.3] - 2026-10-10
 
 ### Changed
