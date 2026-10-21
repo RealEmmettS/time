@@ -103,6 +103,7 @@ export function mountClockHelp(document, nav) {
   const content = document.getElementById("clock-help-content");
   if (!select || !content) return;
   select.value = detectPlatform(nav);
+  document.defaultView?.ShaughvDropdown?.enhance(select)?.refresh();
   const render = () => {
     const help = CLOCK_HELP[select.value] || CLOCK_HELP.unknown;
     content.replaceChildren();
