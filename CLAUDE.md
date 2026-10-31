@@ -29,4 +29,4 @@ Read METHODOLOGY.md before changing timing behavior. Keep clock correctness inde
 
 ## Design
 
-Preserve the square borders, hard shadows, dot grid, Makira/Paper Mono typography, green accent, branding, 12/24-hour preference, and responsive large clock. Keep technical explanations in the diagnostics disclosure. DOM IDs in index.html and clock-display.js must agree. Pretext requires the existing Vite optimizeDeps entry.
+Preserve the square borders, hard shadows, dot grid, Makira/Geist Mono typography from the SHAUGHV CDN, green accent, branding, 12/24-hour preference, and responsive large clock. Check the live CDN manifest for recommended fonts when updating typography. Keep technical explanations in the diagnostics disclosure. DOM IDs in index.html and clock-display.js must agree. Pretext requires the existing Vite optimizeDeps entry.
