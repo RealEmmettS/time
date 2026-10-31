@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.5] - 2026-10-30
+
+### Changed
+
+- Use the SHAUGHV CDN's recommended Makira and Geist Mono families through their hosted stylesheets. Makira replaces the local font declarations; Geist Mono replaces Paper Mono for the clock and technical labels, with system font fallbacks retained.
+
 ## [0.7.4] - 2026-10-21
 
 ### Added
