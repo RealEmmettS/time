@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.6] - 2026-11-02
+
+### Changed
+
+- Refresh the shared SHAUGHV cursor script URL to the CDN's current `2026-10-21.4` release, preserving the green accent and companion dropdown integration.
+
 ## [0.7.5] - 2026-10-30
 
 ### Changed
