@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.7] - 2026-11-20
+
+### Changed
+
+- Center the Satin Steel watch behind the time at 12% opacity. The brushed case has a deeper profile, and the woven strap follows a gentle taper from each lug.
+
 ## [0.7.6] - 2026-11-02
 
 ### Changed

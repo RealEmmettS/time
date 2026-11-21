@@ -168,15 +168,9 @@
       class="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6"
     >
       <!-- Clock Container -->
-      <div class="relative w-full flex flex-col items-center gap-3 md:gap-5">
-        <!-- Watch watermark -->
-        <img
-          src="/watch-side-view.svg"
-          alt=""
-          aria-hidden="true"
-          class="watch-watermark"
-        />
-
+      <div
+        class="relative isolate w-full flex flex-col items-center gap-3 md:gap-5"
+      >
         <!-- Current reference state -->
         <div
           id="clock-reference-label"
@@ -189,6 +183,13 @@
         <div
           class="clock-container clock-digits font-headline font-bold text-on-surface"
         >
+          <!-- Watch watermark -->
+          <img
+            src="/watch-side-view.svg"
+            alt=""
+            aria-hidden="true"
+            class="watch-watermark"
+          />
           <!-- HH:MM row -->
           <div class="clock-row">
             <span id="clock-hours" class="clock-time">--</span>
