@@ -73,16 +73,19 @@
 }
 
 /* ── Watch watermark ── */
+/* The SVG frames the hands at its center. Size its view relative to the digits' area. */
 .watch-watermark {
+  --watch-size: min(120vh, calc(100vw - 2rem));
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -48%);
-  height: 120vh;
-  width: auto;
-  opacity: 0.025;
+  width: calc(3.2 * var(--watch-size));
+  max-width: none;
+  height: auto;
+  transform: translate(-50%, -50%);
+  opacity: 0.12;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
   user-select: none;
 }
 
@@ -93,6 +96,7 @@
  * HH:MM on one line, :SS below — digits as large as possible
  */
 .clock-container {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
