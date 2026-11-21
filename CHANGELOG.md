@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.8] - 2026-11-20
+
+### Changed
+
+- Shift the watch watermark slightly left to balance the crown and case behind the clock digits.
+
 ## [0.7.7] - 2026-11-20
 
 ### Changed

@@ -73,12 +73,12 @@
 }
 
 /* ── Watch watermark ── */
-/* The SVG frames the hands at its center. Size its view relative to the digits' area. */
+/* Offset the centered hand pivot slightly to balance the crown and case on the right. */
 .watch-watermark {
   --watch-size: min(120vh, calc(100vw - 2rem));
   position: absolute;
   top: 50%;
-  left: 50%;
+  left: calc(50% - min(40px, var(--watch-size) * 0.024));
   width: calc(3.2 * var(--watch-size));
   max-width: none;
   height: auto;
