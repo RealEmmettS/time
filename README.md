@@ -36,6 +36,8 @@ node scripts/compare-timing.mjs https://YOUR-PREVIEW.vercel.app
 
 The first comparison uses deterministic synthetic delays. The second replays the same live exchanges through the legacy and revised estimators; it requires an accessible preview and does not establish absolute UTC accuracy.
 
+For a protected preview, set `TIKSET_PREVIEW_ORIGIN` to the exact HTTPS origin from your Vercel deployment dashboard and `TIKSET_PREVIEW_COOKIE` to its authentication cookie. The benchmark sends the cookie only to that origin. Other destinations and runs without both settings are anonymous.
+
 ## Deployment
 
 Vercel hosts both the static Vite build and `/api/time`. The existing GitHub integration deploys `main` to production. Qualify changes on a preview first. CI runs the timing/recovery tests, formatting checks, and production build.

@@ -2,6 +2,7 @@
 // One set of exchanges is replayed through both estimators for a fair comparison.
 import { execFileSync } from "node:child_process";
 import { fuseIntervals, timingSample } from "../src/timing.js";
+import { previewHeaders } from "./preview-headers.mjs";
 
 const old = execFileSync("git", ["show", "20652b3:src/atomic-sync.js"], {
   encoding: "utf8",
@@ -30,8 +31,16 @@ const rows = [];
 const target = process.argv[2];
 if (target) {
   const base = new URL(target);
-  if (base.protocol !== "https:" && base.hostname !== "localhost")
+  if (
+    base.protocol !== "https:" &&
+    !(base.protocol === "http:" && base.hostname === "localhost")
+  )
     throw new Error("Use a preview HTTPS URL");
+  const headers = previewHeaders(
+    base,
+    process.env.TIKSET_PREVIEW_ORIGIN,
+    process.env.TIKSET_PREVIEW_COOKIE,
+  );
   for (let round = 0; round < 6; round++) {
     const modern = [],
       previous = [];
@@ -48,9 +57,7 @@ if (target) {
         cache: "no-store",
         signal: AbortSignal.timeout(3000),
         redirect: "error",
-        headers: process.env.TIKSET_PREVIEW_COOKIE
-          ? { Cookie: process.env.TIKSET_PREVIEW_COOKIE }
-          : {},
+        headers,
       });
       const headersAt = performance.now();
       const afterHeaders = Date.now();

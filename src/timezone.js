@@ -3,10 +3,9 @@
 /**
  * Timezone detection and formatting utilities.
  *
- * Detection chain (no permissions required for primary methods):
+ * Timezone detection uses local browser data:
  *   1. Intl.DateTimeFormat API — reads timezone from OS settings (instant, universal)
  *   2. Date.getTimezoneOffset() — fallback for UTC offset (universal)
- *   3. Geolocation + timeapi.io — optional cross-check (only if #1 gives low confidence)
  *
  * Works on: Chrome, Firefox, Safari, Edge, Samsung Internet, Opera
  * Platforms: Windows, macOS, Linux, iOS, Android, Smart TVs, embedded browsers
@@ -29,14 +28,6 @@ export function detectTimezone() {
   const sign = offset <= 0 ? "+" : "-";
   const hours = Math.floor(Math.abs(offset) / 60);
   return `Etc/GMT${sign}${hours}`;
-}
-
-/**
- * Returns true if the detected timezone is high-confidence (proper IANA name).
- */
-export function isTimezoneConfident() {
-  const tz = detectTimezone();
-  return tz && tz.includes("/") && !tz.startsWith("Etc/");
 }
 
 /**
@@ -148,56 +139,4 @@ export function formatDateString(date) {
     "December",
   ];
   return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-}
-
-/**
- * Resolve timezone from coordinates using timeapi.io (free, no API key).
- * Only called when Intl API gives low-confidence results.
- * @returns {Promise<string | null>} IANA timezone name or null
- */
-export async function resolveTimezoneFromLocation() {
-  if (!navigator.geolocation) return null;
-
-  // Get coordinates (will prompt user for permission)
-  const coords = await new Promise((resolve) => {
-    const timeout = setTimeout(() => resolve(null), 10000);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        clearTimeout(timeout);
-        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      },
-      () => {
-        clearTimeout(timeout);
-        resolve(null);
-      },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
-    );
-  });
-
-  if (!coords) return null;
-
-  // Resolve timezone via timeapi.io coordinate endpoint
-  try {
-    const url = `https://timeapi.io/api/time/current/coordinate?latitude=${coords.lat}&longitude=${coords.lng}`;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(url, {
-      signal: controller.signal,
-      cache: "no-store",
-    });
-    clearTimeout(timeout);
-
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.timeZone && data.timeZone.includes("/")) {
-      console.log(
-        `[Timezone] Resolved from location: ${data.timeZone} (${coords.lat}, ${coords.lng})`,
-      );
-      return data.timeZone;
-    }
-  } catch {
-    // Network error — not critical
-  }
-
-  return null;
 }
