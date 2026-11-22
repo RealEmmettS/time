@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.9] - 2026-11-22
+
+### Security
+
+- Updated Vite, PostCSS, Pretext, and affected build dependencies to address published security advisories.
+- Removed the unused timezone lookup that sent browser coordinates to an external service. The clock uses the device timezone and local UTC offset.
+- Scoped the timing benchmark's preview cookie to an explicitly configured HTTPS origin.
+
 ## [0.7.8] - 2026-11-20
 
 ### Changed

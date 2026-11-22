@@ -1,6 +1,6 @@
 {
   "name": "atomic-time",
-  "version": "0.7.8",
+  "version": "0.7.9",
   "private": true,
   "type": "module",
   "description": "Network-corrected time for setting watches and checking computer clocks",
@@ -14,12 +14,12 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.2",
     "autoprefixer": "^10.4.27",
-    "postcss": "^8.5.8",
+    "postcss": "^8.5.33",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.2.2",
-    "vite": "^8.0.1"
+    "vite": "^8.3.8"
   },
   "dependencies": {
-    "@chenglou/pretext": "^0.0.4"
+    "@chenglou/pretext": "0.0.5"
   }
 }
