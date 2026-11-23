@@ -17,11 +17,6 @@
   --font-clock: "Geist Mono", ui-monospace, monospace;
 }
 
-/* The shared cursor reads its color from a host mounted under body. */
-body:has(#clock-ampm:hover) {
-  --clock-cursor-color: #ff03bf;
-}
-
 /* Dot grid background */
 .dot-grid {
   background-image: radial-gradient(
