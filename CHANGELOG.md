@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.3] - 2026-11-23
+
+- Let the cursor blend continuously across the AM/PM badge, including its lettering and border.
+
 ## [0.8.2] - 2026-11-23
 
 - Remove the reference label and underline above the clock. The sync status still shows when the displayed time needs a check.

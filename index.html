@@ -198,9 +198,10 @@
 
         <!-- Badges Row -->
         <div class="flex gap-3 items-center">
+          <!-- Hit-test the page through this readout so the cursor blends across its edges. -->
           <div
             id="clock-ampm"
-            class="bg-accent text-accent-dark px-3 py-1 font-headline font-bold text-lg md:text-2xl border-2 border-on-surface tracking-wide"
+            class="pointer-events-none bg-accent text-accent-dark px-3 py-1 font-headline font-bold text-lg md:text-2xl border-2 border-on-surface tracking-wide"
           >
             --
           </div>
@@ -266,9 +267,7 @@
       </label>
     </footer>
 
-    <shaughv-cursor
-      color="var(--clock-cursor-color, var(--color-accent))"
-    ></shaughv-cursor>
+    <shaughv-cursor color="var(--color-accent)"></shaughv-cursor>
     <script
       defer
       src="https://cdn.shaughv.com/js/shaughv-cursor.js?v=2026-10-21.4"
