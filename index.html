@@ -172,14 +172,6 @@
       <div
         class="relative isolate w-full flex flex-col items-center gap-3 md:gap-5"
       >
-        <!-- Current reference state -->
-        <div
-          id="clock-reference-label"
-          class="font-mono text-[10px] font-bold text-outline tracking-[0.08em] uppercase border-b border-outline pb-1"
-        >
-          DEVICE TIME · NOT YET CHECKED
-        </div>
-
         <!-- Time Display — stacks on narrow portrait, inline on wider -->
         <div
           class="clock-container clock-digits font-headline font-bold text-on-surface"
@@ -274,7 +266,9 @@
       </label>
     </footer>
 
-    <shaughv-cursor color="var(--color-accent)"></shaughv-cursor>
+    <shaughv-cursor
+      color="var(--clock-cursor-color, var(--color-accent))"
+    ></shaughv-cursor>
     <script
       defer
       src="https://cdn.shaughv.com/js/shaughv-cursor.js?v=2026-10-21.4"
