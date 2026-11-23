@@ -145,7 +145,8 @@ export class ClockDisplay {
         this._lastRenderedMinute = currentMinute;
         this._renderMeta(now);
       }
-      this._updateSyncStatus();
+      // Give the browser a chance to paint the tick before laying out diagnostics.
+      setTimeout(() => this._updateSyncStatus(), 0);
     }
   }
 
@@ -195,7 +196,9 @@ export class ClockDisplay {
   _updateSyncStatus() {
     if (!this.els.statusText) return;
     const info = this.sync.getStatus();
-    const copy = describeClock(info);
+    const panelOpen = !document.getElementById("sync-tooltip").hidden;
+    const metrics = panelOpen ? this.scheduler.getMetrics() : null;
+    const copy = describeClock(info, metrics);
     const set = (id, value) => {
       const element = document.getElementById(id);
       if (element && element.textContent !== value) element.textContent = value;
@@ -228,7 +231,9 @@ export class ClockDisplay {
       info.hasReference
         ? copy.fresh
           ? "Corrected time displayed."
-          : "Recheck Needed."
+          : info.status === "syncing"
+            ? "Verifying the previous reference"
+            : "Recheck needed."
         : "Uncorrected device time below",
     );
     this.els.statusDot.classList.remove(
@@ -251,21 +256,26 @@ export class ClockDisplay {
           : "PREVIOUS TIME REFERENCE · CHECK NEEDED"
         : "DEVICE TIME · NOT YET CHECKED",
     );
+    if (headlineChanged && this._fontsReady) this._resizeSyncPill();
+    if (!panelOpen) return;
     set("diagnostic-summary", copy.summary);
+    set("diagnostic-action", copy.action);
     set("diagnostic-correction", copy.correction);
     set("diagnostic-watch", copy.watch);
     set("diagnostic-issue", info.issue);
     set(
       "diagnostic-range",
       info.hasReference
-        ? `±${duration(info.networkUncertainty)} at the last measurement`
+        ? `±${duration(info.networkUncertainty)}${info.sampleAge > info.age ? " from the tighter previous measurement, confirmed by the latest check" : " at the latest check"}`
         : "Not measured",
     );
     set(
       "diagnostic-age",
       info.age === null
         ? "No successful check yet"
-        : `${Math.floor(info.age / 1000)} seconds ago`,
+        : copy.fresh
+          ? `${Math.floor(info.age / 1000)} seconds ago`
+          : "Previous reference awaiting verification",
     );
     set("diagnostic-agreement", copy.agreement);
     set("diagnostic-source", info.endpoint?.name || "None");
@@ -277,17 +287,17 @@ export class ClockDisplay {
     );
     set(
       "diagnostic-total",
-      info.hasReference
+      copy.fresh
         ? `±${duration(info.uncertainty)} including measured transfer ranges and drift allowance`
-        : "Not measured",
+        : "Awaiting a fresh measurement",
     );
     set("diagnostic-rtt", duration(info.rtt));
     set("diagnostic-jitter", duration(info.jitter));
     set(
       "diagnostic-offset",
-      info.hasReference
-        ? `${duration(Math.abs(info.offset))} ${info.offset >= 0 ? "behind" : "ahead"}; range ±${duration(info.offsetUncertainty)}`
-        : "Not measured",
+      copy.fresh
+        ? `±${Math.ceil(info.offsetUncertainty)} ms including the reference range, device clock resolution, and time to read the clock`
+        : "Awaiting a fresh measurement",
     );
     set(
       "diagnostic-samples",
@@ -314,7 +324,6 @@ export class ClockDisplay {
         )
         .join(" · ") || "Not checked yet",
     );
-    const metrics = this.scheduler.getMetrics();
     set(
       "diagnostic-render",
       metrics.callbackLateness
@@ -329,7 +338,6 @@ export class ClockDisplay {
     );
     document.getElementById("sync-recheck").disabled =
       info.status === "syncing";
-    if (headlineChanged && this._fontsReady) this._resizeSyncPill();
   }
 
   /**

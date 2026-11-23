@@ -5,13 +5,29 @@ export const DRIFT_MS_PER_MS = 100 / 1_000_000;
 export const FRESH_MS = 90_000;
 export const CROSS_CHECK_MS = 600_000;
 
+export function utcStamp(value) {
+  const match =
+    typeof value === "string" &&
+    value.match(
+      /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,9}))?(?:Z|\+00:00)$/,
+    );
+  return {
+    time: match
+      ? Date.parse(`${match[1]}Z`) + Number(`0.${match[2] || "0"}`) * 1000
+      : NaN,
+    quantum: match ? 1000 * 10 ** -(match[2]?.length ?? 0) : NaN,
+  };
+}
+
 export function parseUtc(value) {
-  if (typeof value !== "string") return NaN;
-  const match = value.match(
-    /^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,9}))?(?:Z|\+00:00)$/,
-  );
-  if (!match) return NaN;
-  return Date.parse(`${match[1]}Z`) + Number(`0.${match[2] || "0"}`) * 1000;
+  return utcStamp(value).time;
+}
+
+export function timestampReceipt(header, serverSent, headersAt, bodyAt) {
+  if (header === null) return bodyAt;
+  if (header !== String(serverSent))
+    throw new Error("Inconsistent timestamp header");
+  return headersAt;
 }
 
 /** Offset is server epoch minus the client's monotonic clock. */
@@ -90,7 +106,9 @@ export function fuseIntervals(samples) {
   const { lower, upper } = regions[0];
   const offset = (lower + upper) / 2;
   const members = samples.filter((s) => s.lower <= offset && s.upper >= offset);
-  const floor = Math.max(...members.map((s) => 2 * (s.resolution || 1)));
+  const floor = Math.max(
+    ...members.map((s) => Math.max(2 * (s.resolution || 1), s.quantum || 0)),
+  );
   const uncertainty = Math.max((upper - lower) / 2, floor);
   return {
     offset,
@@ -112,7 +130,7 @@ export function intervalsAgree(a, b, now) {
 }
 
 // Brief probe; if a privacy-coarsened timer never advances, use a 100 ms floor.
-export function timerResolution(read, budget = 20_000) {
+export function timerResolution(read, budget = 20_000, fallback = 100) {
   let previous = read();
   let minimum = Infinity;
   for (let i = 0; i < budget; i++) {
@@ -120,6 +138,21 @@ export function timerResolution(read, budget = 20_000) {
     if (current > previous) minimum = Math.min(minimum, current - previous);
     previous = current;
     if (minimum < 1) break;
+  }
+  return Number.isFinite(minimum) ? Math.max(1, minimum) : fallback;
+}
+
+// A fast CPU can finish the startup probe entirely within one ordinary tick.
+// Wait across ticks and only improve the floor when the clock actually advances.
+export async function refineResolution(read, sleep) {
+  let previous = read();
+  let minimum = Infinity;
+  for (let i = 0; i < 12 && minimum > 1; i++) {
+    await sleep(2);
+    const current = read();
+    if (current > previous) minimum = Math.min(minimum, current - previous);
+    minimum = Math.min(minimum, timerResolution(read, 2000, Infinity));
+    previous = current;
   }
   return Number.isFinite(minimum) ? Math.max(1, minimum) : 100;
 }

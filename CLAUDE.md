@@ -13,7 +13,7 @@ ATOMIC TIME is a vanilla JavaScript/Vite website with a Vercel Node.js time endp
 ## Architecture
 
 - `src/timing.js`: pure time-transfer math, UTC parsing, interval selection and uncertainty assumptions.
-- `src/source-selection.js`: provider majority, Cloudflare preference and conservative replacement selection.
+- `src/source-selection.js`: provider majority, uncertainty-based selection and validation of a recent precise measurement.
 - `src/drift-tracker.js`: guarded per-page drift estimation, independent of wall-clock changes.
 - `server/time-api.js`: allowlisted Cloudflare/NIST routing and per-instance NIST polling guard.
 - `src/atomic-sync.js`: sampling, source checks, monotonic reference and lifecycle.

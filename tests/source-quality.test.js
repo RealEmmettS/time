@@ -12,12 +12,20 @@ const report = (name, offset, uncertainty = 10) => ({
   measuredAt: 0,
 });
 
-test("Cloudflare stays preferred despite a narrower agreeing source", () => {
-  const cf = report("Cloudflare via Vercel", 0, 20),
-    nist = report("NIST via Vercel", 1, 5);
-  const result = selectSources([cf, nist, report("third", 2)], 0);
-  assert.equal(result.selected, cf);
-  assert.equal(result.selected.uncertainty, 20);
+test("prefer the tighter complete range among agreeing measured upstreams", () => {
+  const cf = { ...report("Cloudflare via Vercel", 4, 20), upstream: {} };
+  const nist = { ...report("NIST via Vercel", 1, 5), upstream: {} };
+  const fallback = report("public HTTP", 2, 1);
+  const result = selectSources([cf, fallback, nist], 0);
+  assert.equal(result.selected, nist);
+  assert.equal(result.selected.uncertainty, 5);
+  assert.equal(result.members.length, 3);
+  nist.uncertainty = 18;
+  assert.equal(selectSources([cf, nist], 0).selected, cf);
+  assert.equal(selectSources([cf, nist], 0, nist.endpoint.name).selected, nist);
+  nist.measuredAt = -60000;
+  cf.uncertainty = 15;
+  assert.equal(selectSources([cf, nist], 0, nist.endpoint.name).selected, cf);
 });
 test("unique majority excludes a faulty Cloudflare reference and preserves full error", () => {
   const result = selectSources(

@@ -9,13 +9,13 @@ Built by [SHAUGHV](https://shaughv.com) / [QubeTX](https://qubetx.com).
 The page estimates the difference between a time server and the browser's elapsed-time clock. It advances that reference independently of operating-system clock corrections, then compares it with the device clock to report ahead/behind.
 
 - A same-origin Vercel Node.js endpoint references time.cloudflare.com over NTP, then supplies corrected handler-entry and response-generation timestamps.
-- Eight samples establish the reference; time.now and timeapi.io provide periodic cross-checks.
+- Each minute, compare Cloudflare and NIST over NTP and verify the selected reference with a full eight-attempt burst. time.now and timeapi.io provide additional periodic checks.
 - Conflicting sources or ambiguous samples are reported instead of silently publishing a new reference.
 - The visible tick is scheduled at corrected second boundaries using foreground animation frames.
 - The diagnostics explain computer-clock difference, both network paths, upstream uncertainty, freshness, source agreement, and browser scheduling. OS-specific setup help shows Windows, macOS, or Linux instructions one at a time.
 - The existing responsive clock, timezone handling, branding, and saved 12/24-hour preference are preserved.
 
-**This is an internet time-of-day reference, not a calibrated atomic clock.** The primary range includes the browser path and Cloudflare NTP path plus Cloudflare-reported root uncertainty. This is not certified UTC accuracy; fallback sources have unknown UTC error, and all ranges exclude physical display latency. A timestamp with many decimal places does not establish corresponding accuracy. See [METHODOLOGY.md](METHODOLOGY.md) for assumptions, equations, failure handling, and validation.
+The reported reference range includes the browser path, the selected provider’s NTP path, its reported root uncertainty, and elapsed drift allowance. Public HTTP fallback sources have unknown UTC error. Physical screen latency also affects the visible tick. See [METHODOLOGY.md](METHODOLOGY.md) for assumptions and [VALIDATION.md](VALIDATION.md) for measured results.
 
 ## Development
 
@@ -52,4 +52,4 @@ The four-font comparison and decision to retain Geist Mono are recorded in [ADR 
 
 See [CHANGELOG.md](CHANGELOG.md).
 
-Cloudflare remains preferred within the unique majority agreement. NIST supplies an additional independent NTP reference; ambiguous disagreements retain the previous reference. A bounded browser drift model only activates after at least 12 spaced measurements over 11 minutes and three successful subsequent predictions. See [METHODOLOGY.md](METHODOLOGY.md).
+Among agreeing NTP sources, switch when another complete measurement range is at least 20% tighter. A noisy check can confirm a more precise recent measurement. The computer-clock panel shows the plausible fast/slow range, agreement between NTP readings, and when a repeat check or OS sync makes sense. The browser also qualifies a frequency correction after at least 12 spaced measurements over 11 minutes and three successful subsequent predictions. See [METHODOLOGY.md](METHODOLOGY.md).

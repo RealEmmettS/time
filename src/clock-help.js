@@ -20,15 +20,19 @@ export const CLOCK_HELP = {
   windows: {
     title: "Windows",
     steps: [
-      "Open Settings → Time & language → Date & time. Enable Set time automatically, then select Sync now. You can keep time.windows.com if synchronization succeeds.",
-      "To choose Cloudflare instead, open Control Panel → Clock and Region → Date and Time → Internet Time → Change settings.",
-      "Enable Synchronize with an Internet time server. Enter time.cloudflare.com, select Update now, wait for the success message, then select OK.",
-      "Return here and select Check again. If Internet Time is unavailable on a work-managed PC, its time source may be controlled by your organization.",
+      "Open Settings → Time & language → Date & time and enable Set time automatically.",
+      "Under Additional settings, select Sync now. Wait for Windows to confirm the sync, then return here and select Check again.",
+    ],
+    services: [
+      {
+        title: "Choose a different Windows time server",
+        text: "If you need to change the configured server, open Control Panel → Clock and Region → Date and Time → Internet Time → Change settings. Enable synchronization, enter time.cloudflare.com, select Update now, and confirm success before selecting OK. A work-managed PC may use an organization-controlled time source.",
+      },
     ],
     links: [
       [
         "Windows synchronization settings",
-        "https://learn.microsoft.com/en-us/windows-server/networking/windows-time-service/windows-time-service-tools-and-settings",
+        "https://support.microsoft.com/en-us/windows/experience/personalization/set-time-date-and-time-zone-settings-in-windows",
       ],
       [
         "Cloudflare setup guide",
@@ -40,8 +44,13 @@ export const CLOCK_HELP = {
     title: "macOS",
     steps: [
       "Open System Settings → General → Date & Time. Turn on Set time and date automatically (the wording varies slightly by macOS version).",
-      "To choose Cloudflare, select Set beside Source, authenticate if asked, and enter time.cloudflare.com. Confirm the change. Keeping Apple’s default server is also reasonable if it synchronizes successfully.",
-      "Allow synchronization to settle, then return here and select Check again. A restart is not normally required just to change the time server.",
+      "Allow automatic synchronization to settle, then return here and select Check again.",
+    ],
+    services: [
+      {
+        title: "Choose a different Mac time server",
+        text: "Select Set beside the automatic time source. To use Cloudflare, enter time.cloudflare.com, authenticate if asked, and confirm the change.",
+      },
     ],
     links: [
       [
@@ -121,7 +130,7 @@ export function mountClockHelp(document, nav) {
       const detail = add("details", "");
       add("summary", service.title, detail);
       add("p", service.text, detail);
-      add("pre", service.code, detail);
+      if (service.code) add("pre", service.code, detail);
     }
     for (const [label, url] of help.links) {
       const link = add("a", label);
@@ -131,7 +140,7 @@ export function mountClockHelp(document, nav) {
     }
     add(
       "p",
-      "After synchronization finishes, use Check again above. A different server does not guarantee better accuracy; successful, regular synchronization matters.",
+      "This comparison uses UTC. If the clock check looks good but the displayed hour is wrong, check your device’s time zone.",
     );
   };
   select.addEventListener("change", render);

@@ -1,4 +1,4 @@
-# Tikset timing methodology — 0.6.0
+# Tikset timing methodology — 0.8.1
 
 ## Objective and boundaries
 
@@ -10,7 +10,7 @@ Vercel provides the existing HTTPS backend using its default Node.js runtime, wh
 
 `GET /api/time?requestId=<identifier>` returns `{version:1, requestId, receivedAt, sentAt, timestamp}`. Epoch timestamps are milliseconds; `timestamp` equals `sentAt` for old clients. The response also includes `source` metadata: name, protocol, authentication flag, uncertainty/age, residual NTP delay, root delay/dispersion, stratum and leap indicator. The handler records monotonic entry time and time immediately before serialization, then maps both to the same Cloudflare-derived epoch reference. These are application timestamps, not packet or hardware timestamps. Platform queueing before entry and transport/serialization after the last stamp remain in measured path delay. Cache headers forbid storage, and the client rejects positive Age, wrong protocol/identifier, invalid timestamps and impossible durations. The request identifier detects accidental replay/caching, not a malicious source. HTTPS authenticates transport.
 
-For client monotonic send/complete-body times `m1,m4`, and server epoch stamps `s2,s3`:
+For client monotonic send/receipt times `m1,m4` and server epoch stamps `s2,s3`, the transfer calculation uses the following quantities.
 
 - Round trip: `rtt = m4 - m1`.
 - Handler processing: `p = s3 - s2`.
@@ -18,9 +18,9 @@ For client monotonic send/complete-body times `m1,m4`, and server epoch stamps `
 - Reference epoch-minus-monotonic estimate: `b = ((s2-m1)+(s3-m4))/2`.
 - Interval: `b ± (d/2 + 2q)`, with timing floor `q >= 1 ms`.
 
-The midpoint assumes symmetric paths; the interval permits unequal nonnegative path delays. Processing greater than RTT plus rounding allowance, backward timestamps and exchanges over three seconds are rejected. Body receipt is measured before JSON parsing. Fallbacks have one timestamp, so `s2=s3` and processing remains in the interval. Fractional UTC milliseconds are retained, without suggesting equivalent accuracy.
+The midpoint assumes symmetric paths. The interval allows unequal nonnegative delays. The server places the same send timestamp in `X-Tikset-Sent-At` and in the correlated body. Record header arrival immediately after fetch resolves. Use it as `m4` only after validating the full response, including the matching timestamp. Older deployments and public fallback sources use complete-body receipt. Reject mismatched headers, reversed timestamps, impossible processing durations, and bodies that arrive after the three-second deadline. Single-stamp fallbacks include processing in their range. Allow a full unit of their reported decimal precision for rounding or truncation, including a second for a whole-second timestamp.
 
-Browser timer granularity is probed briefly. A timer that does not advance during the probe receives a conservative 100 ms floor. This is a resolution heuristic, not timer calibration. The backend uses submillisecond NTP/monotonic timestamps, while the browser retains a minimum 1 ms timing floor. Other source errors remain possible.
+Browser timer granularity is probed briefly. If the startup probe finds no tick or a 100 ms step, take up to twelve more observations separated by timer yields. Use the smallest observed positive step with a minimum 1 ms allowance. A clock that remains frozen receives a 100 ms heuristic floor. These probes cannot calibrate the hardware or establish the behavior of every privacy mode.
 
 ## Backend NTP measurement
 
@@ -36,19 +36,25 @@ After browser interval fusion, add the maximum upstream range reported in that s
 
 Drain one warm-up response, then take eight sequential samples 50 ms apart from the selected reference endpoint. Try Vercel first, then time.now, then timeapi.io if no usable reference is obtained. Two initial failures stop an unavailable endpoint early. Cross-check endpoints receive a warm-up and two measurements. No parallel measurement traffic competes within a synchronization cycle.
 
-Intersect sample intervals in a common monotonic frame with an elapsed-time drift allowance. Select the unique maximum-overlap region only if it has a strict majority of successful samples, with at least two successful samples. Equal disjoint maxima are ambiguous and rejected. Zero, negative and touching intervals are supported. Uncertainty cannot shrink below the quantization floor. Sample variation is the standard deviation before rejection; accepted/attempted counts are reported separately. No statistical confidence percentage is claimed.
+Intersect sample intervals in a common monotonic frame with an elapsed-time drift allowance. Require a unique maximum-overlap region supported by a strict majority of the attempted samples. A full burst needs at least five of eight, and a comparison needs both samples. Equal disjoint maxima are ambiguous. Allow zero, negative and touching intervals and retain the quantization floor. Report sample variation before rejection and show accepted and attempted counts.
 
-Use one vote per available provider and find a unique strict-majority interval region. Keep Cloudflare preferred if its interval covers that region. Otherwise select an agreeing source by its complete uncertainty, retaining configured priority unless another range is at least 20% smaller. The majority region is used only for selection; retain the selected source's full uncertainty. Collect eight fresh samples before publishing a replacement. Refresh comparison sources before allowing older votes to reject a fresh primary measurement. Disclose providers outside the unique majority. Two disagreeing sources or tied clusters cannot establish which source is wrong, so they prevent publication of a candidate. For ambiguous results, a previous valid reference continues with an explicit conflict warning; initial conflicts leave the page on uncorrected device time. A unavailable comparison source qualifies the result, rather than making the entire clock unavailable.
+Give each available provider one vote. Among the unique majority, prefer sources with measured upstream uncertainty. Compare their complete ranges at the same instant, including elapsed drift. Start with Cloudflare and keep the current eligible source unless another range is at least 20% smaller. Recheck the winner with a full burst before switching. Refresh comparison sources before older votes can reject a fresh primary. A split or a tied majority holds the last reference with a conflict warning. A public fallback can supply relative time when neither measured upstream is usable.
+
+When both NTP references corroborate a check and no provider is excluded, compare the new full burst with the immediately preceding qualified raw burst from the same source. Reuse the earlier point only if it is at most 90 seconds old, its entire drift-expanded range fits inside the new range, and every agreeing source supports that point. Keep the earlier burst’s full upstream and transfer uncertainty, and count drift from its original measurement. The new burst validates the choice. Never feed a retained estimate back as a new raw observation. A failed check or clock interruption clears this history.
 
 ## Clock lifecycle
 
 Advance the accepted epoch using `performance.now()` elapsed time. Compare this value with `Date.now()` only for the device diagnosis. Device clock changes during or after measurement cannot directly change the reference. A successful new network check may step the reference; no gradual correction is used that knowingly leaves the watch-setting display behind the accepted estimate.
 
-Refresh the reference every minute while visible. Cross-check on startup, explicit recheck, return/reconnect, and every ten minutes. A one-second continuity probe detects wall/monotonic divergence and execution gaps over five seconds. Invalidate in-flight generations across interruptions; a queued fresh check supersedes them. Requests are deduplicated, including preserving explicit full-check requests during a primary-only refresh.
+Schedule network checks every minute while the page can run, including in a hidden tab. Hidden checks keep requests sequential and omit the 50 ms pacing timer, which browsers may throttle heavily. Frozen pages cannot run timers or receive fetch callbacks. On return, cancel outstanding work, clear prior source votes and drift evidence, reset the continuity probe and frame history, and start a fresh full check immediately. The previous time reference advances provisionally until fresh measurements qualify. The device comparison and current accuracy range wait for verification.
+
+Check public sources on startup, explicit recheck, return/reconnect, disagreement, and every ten minutes. Once a candidate exists, give each optional HTTP comparison 3.5 seconds. A full check has a 45-second budget. A failed foreground check releases the manual recheck button and gets one early retry after ten seconds. Regular checks continue thereafter. A visible one-second continuity probe also handles device-clock changes and execution gaps over five seconds. Offline and page-cache transitions cancel obsolete work.
 
 Increase the displayed reference uncertainty by an assumed 100 ppm (0.1 ms/s) oscillator allowance. This is a conservative modeling default, not a guaranteed bound for every device. Beyond 90 seconds the reference is stale. A failed refresh marks it stale immediately. Sleep behavior differs among platforms, so resume requires a new measurement even if an elapsed clock appears intact. The stale reference may be wrong after interrupted timing; watch guidance explicitly asks the user to wait.
 
-The device error interval adds the measured wall-clock resolution floor to the combined transfer estimate. If it spans zero, report no difference detected within measurement uncertainty. With a sole source, name that source. Neither this message nor source agreement proves that the device is within a specified distance of UTC.
+Bracket each device clock read with monotonic timestamps. Compare the wall value at the midpoint and add half the read window and the device resolution to the reference uncertainty. Round the displayed endpoints outward to whole milliseconds. If zero lies inside the interval, show how far ahead or behind the device could be.
+
+Computer guidance uses practical thresholds for a clock displayed in seconds. With two recent agreeing NTP sources and no exclusions, a selected range wholly within 100 ms calls for leaving automatic time enabled. Recommend an immediate OS sync when the selected range and both providers’ complete device intervals place the computer at least one second off in the same direction. For intermediate offsets, both raw providers must resolve at least 100 ms in that direction on two checks 45 seconds to three minutes apart. Quick rechecks cannot manufacture confirmation. An interruption, source conflict, or unresolved direction clears it. These thresholds guide actions and do not measure oscillator drift. Watch guidance also considers the reference range and measured callback lateness. The browser cannot observe the physical instant the pixels change.
 
 ## Visible ticks
 

@@ -1,3 +1,34 @@
+# Tikset 0.8.1 tab recovery
+
+November 23, 2026. Tested the built site in Chrome on Windows against the local time API with live NTP upstreams. A second tab covered the clock. Chrome reported the hidden, frozen, resumed and visible events in order.
+
+- Switching away cancelled a deliberately stalled request. The hidden tab subsequently completed a regular network refresh with 12 same-origin requests.
+- Returning after a browser freeze produced a fresh computer-clock comparison in 4.4 seconds. Cloudflare and NIST readings were within 1 ms of each other. The manual recheck button was enabled.
+- With network requests deliberately failing on return, the page reported that it needed a fresh reference and withheld the computer-clock comparison. Restoring fetch without sending an online event or clicking the button let the early retry recover automatically. The full failure-and-recovery sequence took 14.7 seconds.
+- Deterministic tests simulate four hours passing with an unresolved response and a device-clock change, and four hours of sleep during which the monotonic clock stops. Both recover the injected reference and device offset. Additional tests cover delayed timers, a stalled optional provider, the full-check timeout, and offline cancellation.
+
+All 85 tests, formatting checks and a clean production build passed. The four-hour elapsed interval was simulated. Browser freezing and tab switching were exercised directly.
+
+---
+
+# Tikset 0.8.0 validation
+
+November 23, 2026, on one Windows workstation in Chromium.
+
+| Check | Result |
+| --- | --- |
+| Identical synthetic exchanges, 500 seeded rounds | Moving receipt to the verified timestamp header reduced median absolute offset error from 1.30 to 0.80 ms and the 95th percentile from 3.71 to 3.17 ms. Outbound and inbound delays vary independently, with 0–5 ms of additional body delay. |
+| Delayed body, known clock | Adding exactly 200 ms after the stamped headers moved the previous estimate 100 ms behind. The revised estimate stayed at the injected time. An older server without the header still uses the complete body. |
+| Sudden path asymmetry | A corroborated precise burst prevented a subsequent asymmetric burst from moving the displayed estimate by 75 ms. Elapsed uncertainty grew. On the following noisy round the older precise sample aged out. |
+| Local app, real upstream NTP | At 01:07 CDT the computer comparison read 115 ms ahead, with a 92–138 ms range. A separate read-only Windows NTP check against time.windows.com measured 115.3 ms ahead with a 14.5 ms round trip. |
+| Public network path | At 01:21:34 CDT the revised Chromium client read 106 ms ahead using the two public tikset.com NTP routes. Its device range was 61–151 ms ahead and its reference range was ±43.7 ms. Cloudflare and NIST estimates were 3 ms apart. An independent Windows sample in the same second measured 116.5 ms ahead with a 19.0 ms round trip and 10.1 ms of reported root dispersion. |
+
+The public path used the deployed API’s compatible body-timestamp protocol. The local app exercised the new header end to end. Local loopback eliminates most of the browser-to-server path. Neither live measurement establishes absolute UTC accuracy or the instant the screen changed.
+
+Deterministic tests cover source replacement and hysteresis, delayed device reads, repeated-check advice, coarse public timestamps, one wide peer, and stale or conflicting evidence. Desktop and 390 × 844 Chromium checks exercised the pop-out and manual recheck. Hardware display latency and other browser engines were outside this measurement.
+
+---
+
 # Tikset 0.7.0 validation
 
 September 15, 2026. Version 0.7.0 adds NIST and provider-majority selection, preserving Cloudflare preference within the supported group.

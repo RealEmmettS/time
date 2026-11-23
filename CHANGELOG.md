@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.1] - 2026-11-23
+
+- Refresh the time reference in background tabs when the browser allows it. Returning from a tab switch or suspension immediately starts a fresh check and clears outdated computer-clock advice.
+- Cancel interrupted requests, bound slow source checks, and automatically retry a failed foreground check.
+
+## [0.8.0] - 2026-11-23
+
+- Compare fresh Cloudflare and NIST measurements each minute and select the tighter supported source. A noisy check can validate a recent precise reading with its full elapsed uncertainty.
+- Measure timestamp arrival at response headers when the full response confirms the stamp. Account for coarse public timestamps, device timer resolution, and delays while reading the computer clock.
+- Show the plausible ahead/behind range and give specific guidance for an unresolved difference, a repeatable offset, a clock over a second off, or late visible ticks.
+
 ## [0.7.9] - 2026-11-22
 
 ### Security
