@@ -127,7 +127,7 @@ export function createTimeHandler(clock = createReferenceClock()) {
             leapIndicator: reference.leap,
           },
         },
-        { headers },
+        { headers: { ...headers, "X-Tikset-Sent-At": String(sentAt) } },
       );
     } catch {
       return Response.json(

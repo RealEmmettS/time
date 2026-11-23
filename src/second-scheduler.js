@@ -76,6 +76,10 @@ export class SecondScheduler {
     values.push(value);
     if (values.length > 120) values.shift();
   }
+  resetMetrics() {
+    this.lateness.length = 0;
+    this.cadence.length = 0;
+  }
   getMetrics() {
     const summarize = (values) => {
       const sorted = [...values].sort((a, b) => a - b);

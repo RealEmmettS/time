@@ -1,7 +1,11 @@
 // Copyright QubeTX — tikset.com
 // One set of exchanges is replayed through both estimators for a fair comparison.
 import { execFileSync } from "node:child_process";
-import { fuseIntervals, timingSample } from "../src/timing.js";
+import {
+  fuseIntervals,
+  timingSample,
+  timestampReceipt,
+} from "../src/timing.js";
 import { previewHeaders } from "./preview-headers.mjs";
 
 const old = execFileSync("git", ["show", "20652b3:src/atomic-sync.js"], {
@@ -43,6 +47,7 @@ if (target) {
   );
   for (let round = 0; round < 6; round++) {
     const modern = [],
+      bodyTimed = [],
       previous = [];
     const start = performance.now();
     let wallAnchor;
@@ -81,12 +86,22 @@ if (target) {
           upstreamUncertainty,
           data.source?.uncertaintyMs ?? 0,
         );
+        const exchange = {
+          sent,
+          received,
+          serverReceived: data.receivedAt,
+          serverSent: data.sentAt,
+        };
+        bodyTimed.push(timingSample(exchange));
         modern.push(
           timingSample({
-            sent,
-            received,
-            serverReceived: data.receivedAt,
-            serverSent: data.sentAt,
+            ...exchange,
+            received: timestampReceipt(
+              response.headers.get("x-tikset-sent-at"),
+              data.sentAt,
+              headersAt,
+              received,
+            ),
           }),
         );
         previous.push({
@@ -97,10 +112,15 @@ if (target) {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
     const revised = fuseIntervals(modern);
+    const completeBody = fuseIntervals(bodyTimed);
     rows.push({
       round,
       elapsedMs: performance.now() - start,
       legacy: legacy(previous),
+      bodyTimed: completeBody && {
+        ...completeBody,
+        offset: completeBody.offset - wallAnchor,
+      },
       revised: revised && { ...revised, offset: revised.offset - wallAnchor },
       upstreamUncertainty,
       combinedUncertainty: revised && revised.uncertainty + upstreamUncertainty,
@@ -115,6 +135,7 @@ if (target) {
   };
   for (let round = 0; round < 500; round++) {
     const modern = [],
+      bodyTimed = [],
       previous = [];
     const truth = 1000;
     for (let i = 0; i < 8; i++) {
@@ -123,13 +144,15 @@ if (target) {
       const processing = random() * 60;
       const body = random() * 5;
       const sent = i * 150;
-      modern.push(
-        timingSample({
-          sent,
-          received: sent + outbound + processing + inbound + body,
-          serverReceived: sent + outbound + truth,
-          serverSent: sent + outbound + processing + truth,
-        }),
+      const exchange = {
+        sent,
+        received: sent + outbound + processing + inbound,
+        serverReceived: sent + outbound + truth,
+        serverSent: sent + outbound + processing + truth,
+      };
+      modern.push(timingSample(exchange));
+      bodyTimed.push(
+        timingSample({ ...exchange, received: exchange.received + body }),
       );
       previous.push({
         offset: truth + (outbound - inbound - processing) / 2,
@@ -139,6 +162,7 @@ if (target) {
     rows.push({
       truth,
       legacy: legacy(previous),
+      bodyTimed: fuseIntervals(bodyTimed),
       revised: fuseIntervals(modern),
     });
   }
@@ -157,6 +181,16 @@ console.log(
         absoluteError: target
           ? null
           : stats(rows.map((r) => Math.abs(r.legacy.offset - r.truth))),
+      },
+      previousBodyTiming: {
+        uncertainty: stats(rows.map((r) => r.bodyTimed?.uncertainty)),
+        absoluteError: target
+          ? null
+          : stats(
+              rows
+                .filter((r) => r.bodyTimed)
+                .map((r) => Math.abs(r.bodyTimed.offset - r.truth)),
+            ),
       },
       revised: {
         acceptedRounds: rows.filter((r) => r.revised).length,
