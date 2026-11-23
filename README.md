@@ -46,7 +46,7 @@ This HTTPS endpoint cannot replace the NTP server configured in Windows. The web
 
 ## Stack
 
-Vanilla JavaScript ES modules, Vite, Tailwind CSS, and Pretext for responsive text sizing. Both font families load through the hosted stylesheets from cdn.shaughv.com, following the [live CDN defaults](https://cdn.shaughv.com/tree.json): Makira for body text, the date, and time badges; Geist Mono for clock digits and reference and status labels. System sans-serif and monospace stacks provide fallbacks.
+Vanilla JavaScript ES modules, Vite, Tailwind CSS, and Pretext for responsive text sizing. Both font families load through the hosted stylesheets from cdn.shaughv.com, following the [live CDN defaults](https://cdn.shaughv.com/tree.json). Makira is used for body text, the date, and time badges. Geist Mono is used for clock digits and status labels. System sans-serif and monospace stacks provide fallbacks.
 
 The four-font comparison and decision to retain Geist Mono are recorded in [ADR 0001](docs/adr/0001-retain-geist-mono-for-clock-display.md).
 

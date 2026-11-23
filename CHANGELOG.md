@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.2] - 2026-11-23
+
+- Remove the reference label and underline above the clock. The sync status still shows when the displayed time needs a check.
+- Show the cursor in pink over the green AM/PM badge so it stays visible.
+
 ## [0.8.1] - 2026-11-23
 
 - Refresh the time reference in background tabs when the browser allows it. Returning from a tab switch or suspension immediately starts a fresh check and clears outdated computer-clock advice.

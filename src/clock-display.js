@@ -248,14 +248,6 @@ export class ClockDisplay {
           ? "bg-green-500"
           : "bg-yellow-500",
     );
-    set(
-      "clock-reference-label",
-      info.hasReference
-        ? copy.fresh
-          ? "NETWORK-CORRECTED TIME"
-          : "PREVIOUS TIME REFERENCE · CHECK NEEDED"
-        : "DEVICE TIME · NOT YET CHECKED",
-    );
     if (headlineChanged && this._fontsReady) this._resizeSyncPill();
     if (!panelOpen) return;
     set("diagnostic-summary", copy.summary);
