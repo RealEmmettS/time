@@ -19,7 +19,7 @@ ATOMIC TIME is a vanilla JavaScript/Vite website with a Vercel Node.js time endp
 - `src/atomic-sync.js`: sampling, source checks, monotonic reference and lifecycle.
 - `src/second-scheduler.js`: corrected-boundary rendering with frame/timer injection.
 - `src/diagnostics.js`: plain-language status interpretation.
-- `src/clock-display.js`: DOM binding, diagnostics and Pretext responsive sizing.
+- `src/clock-display.js`: DOM binding, diagnostics and Pretext sizing for the status button. `src/style.css` fits the clock digits to the available width and height.
 - `src/main.js`: startup and browser lifecycle; `src/timezone.js`: existing timezone behavior.
 - `api/time.js`: Cloudflare-referenced handler timestamps with legacy timestamp compatibility.
 - `server/ntp.js` and `server/reference-clock.js`: bounded NTP client, packet validation, cached monotonic upstream reference, uncertainty propagation.

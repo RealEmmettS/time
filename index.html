@@ -30,242 +30,235 @@
       rel="stylesheet"
     />
   </head>
-  <body
-    class="bg-surface text-on-surface font-body dot-grid h-screen flex flex-col select-none overflow-hidden"
-  >
-    <!-- Clock diagnosis — click, tap, or use the keyboard for details -->
-    <div
-      id="sync-container"
-      class="fixed top-4 right-4 md:top-5 md:right-6 z-50 flex flex-col items-end"
-    >
-      <button
-        id="sync-btn"
-        class="relative overflow-hidden flex flex-col gap-1 border-2 border-on-surface bg-white px-3 py-2.5 brutalist-shadow-sm cursor-pointer text-left"
-        aria-expanded="false"
-        aria-controls="sync-tooltip"
-      >
-        <div
-          id="sync-source"
-          class="font-mono text-[10px] font-semibold text-outline leading-tight relative z-10"
-        ></div>
-        <div class="flex items-center gap-2 relative z-10">
-          <div
-            id="sync-dot"
-            class="w-2.5 h-2.5 bg-yellow-500 sync-pulse flex-shrink-0"
-          ></div>
-          <span
-            id="sync-text"
-            class="font-mono text-xs font-bold tracking-[0.02em] uppercase"
-            >WAITING</span
-          >
-        </div>
-        <div
-          id="sync-offset"
-          class="font-mono text-[10px] font-semibold text-outline leading-tight relative z-10"
-        ></div>
-        <img
-          src="/watch-band.svg"
-          alt=""
-          aria-hidden="true"
-          class="sync-watch-deco"
-        />
-      </button>
-      <!-- Diagnostics disclosure; controls remain mounted during updates -->
-      <div
-        id="sync-tooltip"
-        hidden
-        role="region"
-        aria-label="Clock diagnostics"
-        class="absolute top-full right-0 mt-3 w-[calc(100vw-2rem)] max-w-80 bg-white border-2 border-on-surface p-4 brutalist-shadow-sm font-body text-xs text-on-surface leading-relaxed z-50 max-h-[70vh] overflow-y-auto"
-      >
-        <div id="sync-tooltip-text" class="diagnostics">
-          <h2>Computer clock</h2>
-          <p id="diagnostic-summary" class="diagnostic-lead"></p>
-          <p id="diagnostic-action"></p>
-          <p id="diagnostic-correction"></p>
-          <p id="diagnostic-issue" role="status"></p>
-          <h3>For setting a watch</h3>
-          <p id="diagnostic-watch"></p>
-          <dl>
-            <dt>Estimated timing range</dt>
-            <dd id="diagnostic-total"></dd>
-            <dt>Browser-to-server timing range</dt>
-            <dd id="diagnostic-range"></dd>
-            <dt>Last successful check</dt>
-            <dd id="diagnostic-age"></dd>
-            <dt>Source agreement</dt>
-            <dd id="diagnostic-agreement"></dd>
-          </dl>
-          <button id="sync-recheck" type="button">Check again</button>
-          <details id="clock-help">
-            <summary>How to sync your computer</summary>
-            <label for="clock-help-platform">Instructions for</label>
-            <select id="clock-help-platform">
-              <option value="windows">Windows</option>
-              <option value="macos">macOS</option>
-              <option value="linux">Linux</option>
-              <option value="mobile">Mobile device</option>
-              <option value="unknown">Choose a system</option>
-            </select>
-            <div id="clock-help-content"></div>
-          </details>
-          <details>
-            <summary>Measurement details</summary>
-            <dl>
-              <dt>Upstream reference</dt>
-              <dd id="diagnostic-upstream"></dd>
-              <dt>Selected source</dt>
-              <dd id="diagnostic-source"></dd>
-              <dt>Computer clock comparison uncertainty</dt>
-              <dd id="diagnostic-offset"></dd>
-              <dt>Fastest round trip</dt>
-              <dd id="diagnostic-rtt"></dd>
-              <dd class="metric-help">
-                Time from sending a request to receiving its timestamp,
-                including server processing.
-              </dd>
-              <dt>Sample variation</dt>
-              <dd id="diagnostic-jitter"></dd>
-              <dd class="metric-help">
-                Standard deviation of sample offsets before rejection.
-                Consistency does not establish UTC accuracy.
-              </dd>
-              <dt>Reference samples</dt>
-              <dd id="diagnostic-samples"></dd>
-              <dt>Time-source checks</dt>
-              <dd id="diagnostic-checks"></dd>
-              <dt>Drift allowance</dt>
-              <dd id="diagnostic-drift"></dd>
-              <dt>Timestamp resolution</dt>
-              <dd id="diagnostic-resolution"></dd>
-              <dt>Visible-tick scheduling</dt>
-              <dd id="diagnostic-render"></dd>
-              <dt>Frame cadence near the tick</dt>
-              <dd id="diagnostic-frames"></dd>
-            </dl>
-            <p>
-              The network range assumes a stable source clock and includes
-              timestamp resolution. It excludes unknown server error relative to
-              UTC. The drift allowance is a model, not a measured hardware
-              guarantee.
-            </p>
-            <p>
-              Callback measurements stop before the screen displays the pixels.
-              Screen refresh and display latency add delay that this website
-              cannot measure.
-            </p>
-            <p>
-              The page corrects its own display; it cannot change your system
-              clock. Use your operating system’s automatic date and time
-              settings to correct that clock, then check again.
-            </p>
-          </details>
-        </div>
-      </div>
-    </div>
-
-    <!-- Main Clock Area -->
-    <main
-      class="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6"
-    >
-      <!-- Clock Container -->
-      <div
-        class="relative isolate w-full flex flex-col items-center gap-3 md:gap-5"
-      >
-        <!-- Time Display — stacks on narrow portrait, inline on wider -->
-        <div
-          class="clock-container clock-digits font-headline font-bold text-on-surface"
+  <body class="bg-surface text-on-surface font-body select-none">
+    <div class="clock-page dot-grid">
+      <!-- Clock diagnosis — click, tap, or use the keyboard for details -->
+      <div id="sync-container" class="relative z-50 self-end shrink-0">
+        <button
+          id="sync-btn"
+          class="grid items-center gap-x-3 gap-y-1 border-2 border-on-surface bg-white px-3 py-2.5 brutalist-shadow-sm cursor-pointer text-left"
+          aria-expanded="false"
+          aria-controls="sync-tooltip"
         >
-          <!-- Watch watermark -->
+          <div
+            id="sync-source"
+            class="font-mono text-[10px] font-semibold text-outline leading-tight relative z-10"
+          ></div>
+          <div class="flex items-center gap-2 relative z-10">
+            <div
+              id="sync-dot"
+              class="w-2.5 h-2.5 bg-yellow-500 sync-pulse flex-shrink-0"
+            ></div>
+            <span
+              id="sync-text"
+              class="font-mono text-xs font-bold tracking-[0.02em] uppercase"
+              >WAITING</span
+            >
+          </div>
+          <div
+            id="sync-offset"
+            class="font-mono text-[10px] font-semibold text-outline leading-tight relative z-10"
+          ></div>
           <img
-            src="/watch-side-view.svg"
+            src="/watch-band.svg"
             alt=""
             aria-hidden="true"
-            class="watch-watermark"
+            class="sync-watch-deco"
           />
-          <!-- HH:MM row -->
-          <div class="clock-row">
-            <span id="clock-hours" class="clock-time">--</span>
-            <span class="clock-colon text-outline">:</span>
-            <span id="clock-minutes" class="clock-time">--</span>
-          </div>
-          <!-- :SS row (below on narrow, inline on wide) -->
-          <div class="clock-row clock-seconds-row">
-            <span class="clock-colon text-outline clock-colon-wide">:</span>
-            <span id="clock-seconds" class="clock-time">--</span>
-          </div>
-        </div>
-
-        <!-- Badges Row -->
-        <div class="flex gap-3 items-center">
-          <!-- Hit-test the page through this readout so the cursor blends across its edges. -->
-          <div
-            id="clock-ampm"
-            class="pointer-events-none bg-accent text-accent-dark px-3 py-1 font-headline font-bold text-lg md:text-2xl border-2 border-on-surface tracking-wide"
-          >
-            --
-          </div>
-          <div
-            class="bg-white text-on-surface px-3 py-1 font-headline font-bold text-lg md:text-2xl border-2 border-on-surface tracking-wide"
-          >
-            <span id="clock-timezone">---</span>
-          </div>
-        </div>
-
-        <!-- Date -->
+        </button>
+        <!-- Diagnostics disclosure; controls remain mounted during updates -->
         <div
-          id="clock-date"
-          class="font-body text-sm md:text-base text-outline font-medium tracking-wide"
+          id="sync-tooltip"
+          hidden
+          role="region"
+          aria-label="Clock diagnostics"
+          class="absolute top-full right-0 mt-2 bg-white border-2 border-on-surface p-4 brutalist-shadow-sm font-body text-xs text-on-surface leading-relaxed overflow-y-auto overscroll-contain"
         >
-          ---
+          <div id="sync-tooltip-text" class="diagnostics">
+            <h2>Computer clock</h2>
+            <p id="diagnostic-summary" class="diagnostic-lead"></p>
+            <p id="diagnostic-action"></p>
+            <p id="diagnostic-correction"></p>
+            <p id="diagnostic-issue" role="status"></p>
+            <h3>For setting a watch</h3>
+            <p id="diagnostic-watch"></p>
+            <dl>
+              <dt>Estimated timing range</dt>
+              <dd id="diagnostic-total"></dd>
+              <dt>Browser-to-server timing range</dt>
+              <dd id="diagnostic-range"></dd>
+              <dt>Last successful check</dt>
+              <dd id="diagnostic-age"></dd>
+              <dt>Source agreement</dt>
+              <dd id="diagnostic-agreement"></dd>
+            </dl>
+            <button id="sync-recheck" type="button">Check again</button>
+            <details id="clock-help">
+              <summary>How to sync your computer</summary>
+              <label for="clock-help-platform">Instructions for</label>
+              <select id="clock-help-platform">
+                <option value="windows">Windows</option>
+                <option value="macos">macOS</option>
+                <option value="linux">Linux</option>
+                <option value="mobile">Mobile device</option>
+                <option value="unknown">Choose a system</option>
+              </select>
+              <div id="clock-help-content"></div>
+            </details>
+            <details>
+              <summary>Measurement details</summary>
+              <dl>
+                <dt>Upstream reference</dt>
+                <dd id="diagnostic-upstream"></dd>
+                <dt>Selected source</dt>
+                <dd id="diagnostic-source"></dd>
+                <dt>Computer clock comparison uncertainty</dt>
+                <dd id="diagnostic-offset"></dd>
+                <dt>Fastest round trip</dt>
+                <dd id="diagnostic-rtt"></dd>
+                <dd class="metric-help">
+                  Time from sending a request to receiving its timestamp,
+                  including server processing.
+                </dd>
+                <dt>Sample variation</dt>
+                <dd id="diagnostic-jitter"></dd>
+                <dd class="metric-help">
+                  Standard deviation of sample offsets before rejection.
+                  Consistency does not establish UTC accuracy.
+                </dd>
+                <dt>Reference samples</dt>
+                <dd id="diagnostic-samples"></dd>
+                <dt>Time-source checks</dt>
+                <dd id="diagnostic-checks"></dd>
+                <dt>Drift allowance</dt>
+                <dd id="diagnostic-drift"></dd>
+                <dt>Timestamp resolution</dt>
+                <dd id="diagnostic-resolution"></dd>
+                <dt>Visible-tick scheduling</dt>
+                <dd id="diagnostic-render"></dd>
+                <dt>Frame cadence near the tick</dt>
+                <dd id="diagnostic-frames"></dd>
+              </dl>
+              <p>
+                The network range assumes a stable source clock and includes
+                timestamp resolution. It excludes unknown server error relative
+                to UTC. The drift allowance is a model, not a measured hardware
+                guarantee.
+              </p>
+              <p>
+                Callback measurements stop before the screen displays the
+                pixels. Screen refresh and display latency add delay that this
+                website cannot measure.
+              </p>
+              <p>
+                The page corrects its own display; it cannot change your system
+                clock. Use your operating system’s automatic date and time
+                settings to correct that clock, then check again.
+              </p>
+            </details>
+          </div>
         </div>
       </div>
-    </main>
 
-    <!-- Bottom Bar -->
-    <footer class="flex items-center justify-between px-4 md:px-8 py-3 md:py-4">
-      <a
-        href="https://shaughv.com"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="SHAUGHV"
-        class="relative block h-10 w-24 md:h-14 shrink-0 opacity-70 hover:opacity-100 transition-opacity"
-      >
-        <shaughv-mark
-          aria-hidden="true"
-          style="
-            display: block;
-            position: absolute;
-            bottom: 0;
-            width: 96px;
-            height: 64px;
-          "
-        >
-          <img
-            src="https://cdn.shaughv.com/brand/shaughv/logos/SHAUGHV-Official.svg"
-            alt=""
-            class="h-full w-full object-contain"
-          />
-        </shaughv-mark>
-      </a>
+      <!-- Main Clock Area -->
+      <main class="clock-main">
+        <!-- Clock Container -->
+        <div class="clock-face">
+          <div class="clock-stage">
+            <!-- Time Display — stacks on narrow portrait, inline on wider -->
+            <div class="clock-container clock-digits font-bold">
+              <!-- Watch watermark -->
+              <img
+                src="/watch-side-view.svg"
+                alt=""
+                aria-hidden="true"
+                class="watch-watermark"
+              />
+              <!-- HH:MM row -->
+              <div class="clock-row">
+                <span id="clock-hours" class="clock-time">--</span>
+                <span class="clock-colon text-outline">:</span>
+                <span id="clock-minutes" class="clock-time">--</span>
+              </div>
+              <!-- :SS row (below on narrow, inline on wide) -->
+              <div class="clock-row clock-seconds-row">
+                <span class="clock-colon text-outline clock-colon-wide">:</span>
+                <span id="clock-seconds" class="clock-time">--</span>
+              </div>
+            </div>
+          </div>
 
-      <label class="flex items-center gap-3 cursor-pointer group">
-        <span
-          class="font-headline text-[10px] font-bold text-outline tracking-widest uppercase group-hover:text-on-surface"
-        >
-          24-HOUR
-        </span>
-        <div class="relative inline-flex items-center">
-          <input type="checkbox" id="toggle-24" class="peer sr-only" />
-          <div
-            class="w-10 h-5 border-2 border-on-surface bg-white peer-checked:bg-accent transition-colors"
-          ></div>
-          <div
-            class="absolute left-[3px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-on-surface transition-all peer-checked:left-[21px]"
-          ></div>
+          <!-- Badges Row -->
+          <div class="clock-details">
+            <div class="clock-badges flex gap-3 items-center">
+              <!-- Hit-test the page through this readout so the cursor blends across its edges. -->
+              <div
+                id="clock-ampm"
+                class="pointer-events-none bg-accent text-accent-dark px-3 py-1 font-headline font-bold text-lg md:text-2xl border-2 border-on-surface tracking-wide"
+              >
+                --
+              </div>
+              <div
+                class="bg-white text-on-surface px-3 py-1 font-headline font-bold text-lg md:text-2xl border-2 border-on-surface tracking-wide"
+              >
+                <span id="clock-timezone">---</span>
+              </div>
+            </div>
+
+            <!-- Date -->
+            <div
+              id="clock-date"
+              class="font-body text-sm md:text-base text-outline font-medium tracking-wide"
+            >
+              ---
+            </div>
+          </div>
         </div>
-      </label>
-    </footer>
+      </main>
+
+      <!-- Bottom Bar -->
+      <footer class="clock-footer flex items-center justify-between">
+        <a
+          href="https://shaughv.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="SHAUGHV"
+          class="clock-brand block shrink-0 opacity-70 hover:opacity-100 transition-opacity"
+        >
+          <shaughv-mark
+            aria-hidden="true"
+            style="
+              display: block;
+              width: var(--brand-width, 96px);
+              height: 64px;
+            "
+          >
+            <img
+              src="https://cdn.shaughv.com/brand/shaughv/logos/SHAUGHV-Official.svg"
+              alt=""
+              class="h-full w-full object-contain"
+            />
+          </shaughv-mark>
+        </a>
+
+        <label class="flex min-h-11 items-center gap-3 cursor-pointer group">
+          <span
+            class="font-headline text-[10px] font-bold text-outline tracking-widest uppercase group-hover:text-on-surface"
+          >
+            24-HOUR
+          </span>
+          <div class="relative inline-flex items-center">
+            <input type="checkbox" id="toggle-24" class="peer sr-only" />
+            <div
+              class="w-10 h-5 border-2 border-on-surface bg-white peer-checked:bg-accent peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 transition-colors"
+            ></div>
+            <div
+              class="absolute left-[3px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-on-surface transition-all peer-checked:left-[21px]"
+            ></div>
+          </div>
+        </label>
+      </footer>
+    </div>
 
     <shaughv-cursor color="var(--color-accent)"></shaughv-cursor>
     <script

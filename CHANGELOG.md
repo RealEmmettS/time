@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.4] - 2026-11-24
+
+- Fit the clock, date, and controls to the visible screen as a phone rotates or its browser toolbar changes height. The watch background reaches the screen edges and the diagnostics panel scrolls independently.
+- Center the date beneath the timezone badges and group the controls along the bottom in phone landscape. The logo and status-button illustration fit inside their controls. Tapping outside diagnostics dismisses them on mobile WebKit.
+
 ## [0.8.3] - 2026-11-23
 
 - Let the cursor blend continuously across the AM/PM badge, including its lettering and border.
