@@ -26,7 +26,6 @@ export class ClockDisplay {
     });
     this._lastRenderedSecond = -1;
     this._lastRenderedMinute = -1;
-    this._rafId = null;
     this._fontsReady = false;
 
     // DOM references (set in mount)
@@ -82,7 +81,8 @@ export class ClockDisplay {
       if (open) this._updateSyncStatus();
     };
     syncBtn.addEventListener("click", () => setOpen(panel.hidden));
-    document.addEventListener("click", (event) => {
+    const dismissOutside = (event) => {
+      if (panel.hidden) return;
       // The dropdown's page-rendered menu lives outside the diagnostics panel.
       const dropdown = container.querySelector('[role="combobox"]');
       const menuId = dropdown?.getAttribute("aria-controls");
@@ -91,7 +91,10 @@ export class ClockDisplay {
       if (!path.includes(container) && !path.includes(menu)) {
         setOpen(false);
       }
-    });
+    };
+    // A tap on non-interactive text can end without a click on mobile WebKit.
+    document.addEventListener("pointerdown", dismissOutside);
+    document.addEventListener("click", dismissOutside);
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !panel.hidden) {
         setOpen(false);
@@ -103,23 +106,8 @@ export class ClockDisplay {
     });
     this._updateSyncStatus();
 
-    // Pretext: RAF-gated resize listener (no ResizeObserver)
-    const scheduleResize = () => {
-      if (this._rafId !== null) return;
-      this._rafId = requestAnimationFrame(() => {
-        this._rafId = null;
-        if (this._fontsReady) {
-          this._resizeClockDigits();
-          this._resizeSyncPill();
-        }
-      });
-    };
-    window.addEventListener("resize", scheduleResize);
-
-    // Pretext: gate on font readiness before first measurement
     document.fonts.ready.then(() => {
       this._fontsReady = true;
-      this._resizeClockDigits();
       this._resizeSyncPill();
     });
 
@@ -185,7 +173,10 @@ export class ClockDisplay {
     const dateStr = formatDateString(date);
 
     if (this.els.timezone) {
-      this.els.timezone.textContent = `${tzAbbr} (${utcOffset})`;
+      this.els.timezone.textContent =
+        tzAbbr.replace(/^GMT/, "UTC") === utcOffset
+          ? utcOffset
+          : `${tzAbbr} (${utcOffset})`;
     }
 
     if (this.els.date) {
@@ -201,7 +192,9 @@ export class ClockDisplay {
     const copy = describeClock(info, metrics);
     const set = (id, value) => {
       const element = document.getElementById(id);
-      if (element && element.textContent !== value) element.textContent = value;
+      if (!element || element.textContent === value) return false;
+      element.textContent = value;
+      return true;
     };
     const headlineChanged = this._statusHeadline !== copy.headline;
     if (headlineChanged) {
@@ -220,13 +213,13 @@ export class ClockDisplay {
         set("sync-text", copy.headline);
       }
     }
-    set(
+    const sourceChanged = set(
       "sync-source",
       info.status === "syncing"
         ? "Computer clock · checking"
         : "Computer clock",
     );
-    set(
+    const offsetChanged = set(
       "sync-offset",
       info.hasReference
         ? copy.fresh
@@ -234,7 +227,7 @@ export class ClockDisplay {
           : info.status === "syncing"
             ? "Verifying the previous reference"
             : "Recheck needed."
-        : "Uncorrected device time below",
+        : "Uncorrected device time",
     );
     this.els.statusDot.classList.remove(
       "bg-green-500",
@@ -248,7 +241,8 @@ export class ClockDisplay {
           ? "bg-green-500"
           : "bg-yellow-500",
     );
-    if (headlineChanged && this._fontsReady) this._resizeSyncPill();
+    if (this._fontsReady && (headlineChanged || sourceChanged || offsetChanged))
+      this._resizeSyncPill();
     if (!panelOpen) return;
     set("diagnostic-summary", copy.summary);
     set("diagnostic-action", copy.action);
@@ -340,92 +334,27 @@ export class ClockDisplay {
     const syncBtn = document.getElementById("sync-btn");
     if (!syncBtn || !this.els.statusText) return;
 
-    const font = getComputedStyle(this.els.statusText).font;
-    if (!font) return;
-
-    const texts = [
-      this.els.statusText?.textContent,
-      this.els.statusSource?.textContent,
-      this.els.statusOffset?.textContent,
-    ].filter(Boolean);
-
     let maxWidth = 0;
-    for (const t of texts) {
-      const prepared = prepareWithSegments(t, font);
+    for (const el of [
+      this.els.statusText,
+      this.els.statusSource,
+      this.els.statusOffset,
+    ]) {
+      const style = getComputedStyle(el);
+      if (!style.font || !el.textContent) continue;
+      const headline = el === this.els.statusText;
+      const text = headline ? el.textContent.toUpperCase() : el.textContent;
+      const prepared = prepareWithSegments(text, style.font);
       walkLineRanges(prepared, Infinity, (line) => {
-        if (line.width > maxWidth) maxWidth = line.width;
+        const tracking = (parseFloat(style.letterSpacing) || 0) * text.length;
+        maxWidth = Math.max(
+          maxWidth,
+          line.width + tracking + (headline ? 18 : 0),
+        );
       });
     }
 
-    // dot(10) + dot-gap(8) + text + right padding for SVG(48) + button padding(24)
-    const totalWidth = Math.ceil(maxWidth + 10 + 8 + 48 + 24);
-    syncBtn.style.width = `${Math.min(totalWidth, window.innerWidth - 32)}px`;
-  }
-
-  /**
-   * Pretext: dynamically size clock digits to fill available width.
-   * Measures reference clock text, scales font-size proportionally.
-   * More padding on large screens, less on small screens.
-   */
-  _resizeClockDigits() {
-    const clockContainer = document.querySelector(".clock-container");
-    const main = document.querySelector("main");
-    if (!clockContainer || !main) return;
-
-    const timeEls = clockContainer.querySelectorAll(".clock-time");
-    const colonEls = clockContainer.querySelectorAll(".clock-colon");
-    if (!timeEls.length) return;
-
-    // Get the clock font family
-    const computed = getComputedStyle(timeEls[0]);
-    const fontFamily = computed.fontFamily;
-    const fontWeight = computed.fontWeight;
-
-    const viewportWidth = window.innerWidth;
-    const isStacked = viewportWidth < 430;
-
-    // Responsive padding: more on large screens, less on small
-    let sidePadding;
-    if (viewportWidth >= 1440) {
-      sidePadding = viewportWidth * 0.12; // 12% each side on TV/large
-    } else if (viewportWidth >= 768) {
-      sidePadding = viewportWidth * 0.06; // 6% each side on desktop
-    } else {
-      sidePadding = 24; // 24px fixed on mobile
-    }
-    const availableWidth = viewportWidth - sidePadding * 2;
-
-    // Measure at a reference size
-    const refSize = 100;
-    const refFont = `${fontWeight} ${refSize}px ${fontFamily}`;
-
-    // Measure the widest possible clock string
-    const measureText = isStacked ? "00:00" : "00:00:00";
-    const prepared = prepareWithSegments(measureText, refFont);
-    let measuredWidth = 0;
-    walkLineRanges(prepared, Infinity, (line) => {
-      if (line.width > measuredWidth) measuredWidth = line.width;
-    });
-
-    if (measuredWidth === 0) return;
-
-    // Scale font size to fill available width
-    let targetSize = (refSize * availableWidth) / measuredWidth;
-
-    // Cap at max size
-    const maxSize = viewportWidth >= 1440 ? 352 : 288;
-    targetSize = Math.min(targetSize, maxSize);
-
-    // Apply to clock-time elements
-    const targetPx = `${Math.floor(targetSize)}px`;
-    timeEls.forEach((el) => {
-      el.style.fontSize = targetPx;
-    });
-
-    // Colons at ~75% of digit size
-    const colonSize = `${Math.floor(targetSize * 0.75)}px`;
-    colonEls.forEach((el) => {
-      el.style.fontSize = colonSize;
-    });
+    // Only the text column is measured. The grid reserves its own artwork column.
+    syncBtn.style.setProperty("--status-width", `${Math.ceil(maxWidth)}px`);
   }
 }

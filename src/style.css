@@ -58,24 +58,22 @@
   animation: sync-pulse 1.5s ease-in-out infinite;
 }
 
-/* ── Tooltip visibility ── */
 /* ── Watch band in sync pill ── */
 .sync-watch-deco {
-  position: absolute;
-  right: -38px;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 140%;
-  width: auto;
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  width: 2.25rem;
+  height: 2.25rem;
+  object-fit: contain;
   pointer-events: none;
   user-select: none;
-  z-index: 0;
 }
 
 /* ── Watch watermark ── */
 /* Offset the centered hand pivot slightly to balance the crown and case on the right. */
 .watch-watermark {
   --watch-size: min(120vh, calc(100vw - 2rem));
+  --watch-size: min(120dvh, calc(100vw - 2rem));
   position: absolute;
   top: 50%;
   left: calc(50% - min(40px, var(--watch-size) * 0.024));
@@ -91,27 +89,235 @@
 
 /* ── Clock layout ── */
 
-/*
- * NARROW PORTRAIT (<430px): Stacked layout
- * HH:MM on one line, :SS below — digits as large as possible
- */
-.clock-container {
+.clock-page {
+  --gutter: 1rem;
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --face-gap: 0.75rem;
   position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  padding: env(safe-area-inset-top, 0px) var(--safe-right)
+    env(safe-area-inset-bottom, 0px) var(--safe-left);
+  /* The oversized watch can bleed to every edge without enlarging the viewport. */
+  overflow: hidden;
+  overflow: clip;
+}
+
+#sync-container {
+  margin: var(--gutter) var(--gutter) 0;
+}
+
+.clock-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: inline-size;
+  padding: 0.5rem max(24px, 6%);
+}
+
+.clock-face,
+.clock-details {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
+  gap: var(--face-gap);
+}
+
+.clock-face {
+  width: 100%;
+  max-height: 100%;
+}
+
+.clock-stage {
+  /* Flex can shorten this row after the badges and date take their space.
+     Its final height is the font-size reference for the digits. */
+  width: 100%;
+  height: min(21cqw, 18rem);
+  min-height: 0;
+  container-type: size;
+  display: grid;
+  place-items: center;
+}
+
+.clock-container {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  font-size: 100cqh;
+  line-height: 1;
+}
+
+.clock-row {
+  display: flex;
+  align-items: baseline;
+}
+
+.clock-colon {
+  font-size: 0.75em;
+  margin-inline: 0.035em;
+}
+
+.clock-details {
+  flex: none;
+  max-width: 100%;
+  text-align: center;
+}
+
+.clock-footer {
+  flex: none;
+  padding: 0.5rem var(--gutter);
+}
+
+.clock-brand {
+  --brand-width: 5.25rem;
+}
+
+@media (orientation: portrait) and (max-width: 429px) {
+  .clock-stage {
+    height: 62cqw;
+  }
+
+  .clock-container {
+    flex-direction: column;
+    align-items: center;
+    font-size: 55cqh;
+  }
+
+  .clock-colon-wide {
+    display: none;
+  }
+
+  .clock-seconds-row {
+    font-size: 0.8em;
+  }
+}
+
+@media (min-width: 768px) {
+  .clock-page {
+    --face-gap: 1.25rem;
+    --gutter: 1.5rem;
+  }
+
+  .clock-footer {
+    padding: 1rem 2rem;
+  }
+
+  .clock-brand {
+    --brand-width: 6rem;
+  }
+}
+
+@media (min-width: 1025px) and (min-height: 601px) {
+  #sync-container {
+    position: absolute;
+    top: env(safe-area-inset-top, 0px);
+    right: var(--safe-right);
+  }
+}
+
+@media (min-width: 1440px) {
+  .clock-main {
+    padding-inline: 12%;
+  }
+
+  .clock-stage {
+    height: min(21cqw, 22rem);
+  }
+}
+
+/* One shared control row leaves the rest of a short viewport for the clock. */
+@media (orientation: landscape) and (min-width: 480px) and (max-height: 540px) {
+  .clock-page {
+    --face-gap: 0.5rem;
+    display: grid;
+    grid-template:
+      minmax(0, 1fr) auto / minmax(7rem, 1fr) minmax(0, auto)
+      minmax(7rem, 1fr);
+    padding-inline: calc(var(--safe-left) + var(--gutter))
+      calc(var(--safe-right) + var(--gutter));
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+  }
+
+  .clock-main {
+    grid-area: 1 / 1 / 2 / -1;
+    padding: 0.75rem 0;
+  }
+
+  .clock-stage {
+    height: min(17cqw, 40dvh, 12rem);
+  }
+
+  .clock-badges {
+    gap: 0.5rem;
+  }
+
+  .clock-badges > div {
+    padding: 0.125rem 0.625rem;
+    font-size: 1rem;
+  }
+
+  #clock-date {
+    font-size: 0.875rem;
+  }
+
+  .clock-footer {
+    grid-area: 2 / 1 / 3 / -1;
+    padding: 0;
+  }
+
+  .clock-brand {
+    --brand-width: 5rem;
+  }
+
+  #sync-container {
+    grid-area: 2 / 2;
+    place-self: center;
+    max-width: 100%;
+    margin: 0;
+  }
+
+  #sync-btn {
+    max-width: 100%;
+    padding-block: 0.375rem;
+    row-gap: 0.125rem;
+  }
+
+  #sync-container #sync-tooltip {
+    inset: auto auto calc(100% + 0.625rem) 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    max-height: min(20rem, 52dvh);
+  }
 }
 
 /* Diagnostics retain the clock's existing type, borders, and square controls. */
+#sync-tooltip {
+  width: min(
+    20rem,
+    calc(100vw - var(--safe-left) - var(--safe-right) - 2 * var(--gutter))
+  );
+  max-height: min(24rem, 42vh);
+  max-height: min(24rem, 42dvh);
+}
+
 #sync-tooltip[hidden] {
   display: none;
 }
 #sync-btn {
-  max-width: calc(100vw - 2rem);
-  padding-right: 3rem;
+  max-width: calc(
+    100vw - var(--safe-left) - var(--safe-right) - 2 * var(--gutter)
+  );
+  grid-template-columns: minmax(0, var(--status-width, max-content)) 2.25rem;
 }
 #sync-btn > div {
+  grid-column: 1;
   overflow-wrap: anywhere;
 }
 .status-unit {
@@ -174,91 +380,6 @@
 }
 #diagnostic-issue:empty {
   display: none;
-}
-
-.clock-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-}
-
-.clock-time {
-  font-size: clamp(4rem, 22vw, 8rem);
-  line-height: 1.05;
-}
-
-.clock-colon {
-  font-size: clamp(3rem, 16vw, 6rem);
-  line-height: 1;
-  margin: 0 0.5vw;
-}
-
-/* Hide the wide colon in stacked mode (narrow) */
-.clock-colon-wide {
-  display: none;
-}
-
-/* Seconds row in stacked mode — smaller, acts as a sub-display */
-.clock-seconds-row .clock-time {
-  font-size: clamp(3rem, 18vw, 6rem);
-}
-
-/*
- * WIDE ENOUGH (>=430px): Single-line layout
- * HH:MM:SS all on one row
- */
-@media (min-width: 430px) {
-  .clock-container {
-    flex-direction: row;
-    align-items: baseline;
-  }
-
-  .clock-colon-wide {
-    display: inline;
-  }
-
-  .clock-time {
-    font-size: clamp(3.5rem, 16vw, 18rem);
-    line-height: 1;
-  }
-
-  .clock-colon {
-    font-size: clamp(2.5rem, 12vw, 14rem);
-  }
-
-  .clock-seconds-row .clock-time {
-    font-size: clamp(3.5rem, 16vw, 18rem);
-  }
-}
-
-/* Tablet+ */
-@media (min-width: 768px) {
-  .clock-time {
-    font-size: clamp(5rem, 14vw, 18rem);
-  }
-
-  .clock-colon {
-    font-size: clamp(4rem, 11vw, 14rem);
-  }
-
-  .clock-seconds-row .clock-time {
-    font-size: clamp(5rem, 14vw, 18rem);
-  }
-}
-
-/* Large desktop / TV */
-@media (min-width: 1440px) {
-  .clock-time {
-    font-size: clamp(10rem, 16vw, 22rem);
-  }
-
-  .clock-colon {
-    font-size: clamp(8rem, 13vw, 18rem);
-  }
-
-  .clock-seconds-row .clock-time {
-    font-size: clamp(10rem, 16vw, 22rem);
-  }
 }
 
 /* Optional local-clock help, shown for one operating system at a time. */
