@@ -326,10 +326,7 @@ export class ClockDisplay {
       info.status === "syncing";
   }
 
-  /**
-   * Pretext: dynamically size sync pill width so text never overlaps the watch SVG.
-   * Measures all visible text lines, finds the widest, sets min-width accordingly.
-   */
+  /** Measure the status text so CSS can keep it clear of the watch band. */
   _resizeSyncPill() {
     const syncBtn = document.getElementById("sync-btn");
     if (!syncBtn || !this.els.statusText) return;
@@ -354,7 +351,6 @@ export class ClockDisplay {
       });
     }
 
-    // Only the text column is measured. The grid reserves its own artwork column.
     syncBtn.style.setProperty("--status-width", `${Math.ceil(maxWidth)}px`);
   }
 }
