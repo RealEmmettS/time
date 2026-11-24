@@ -60,11 +60,14 @@
 
 /* ── Watch band in sync pill ── */
 .sync-watch-deco {
-  grid-column: 2;
-  grid-row: 1 / span 3;
-  width: 2.25rem;
-  height: 2.25rem;
-  object-fit: contain;
+  position: absolute;
+  right: var(--watch-band-overhang);
+  top: 50%;
+  transform: translateY(-50%);
+  height: 140%;
+  /* Keep the illustration out of the text when a line wraps. */
+  max-height: calc(var(--watch-band-space) - var(--watch-band-overhang));
+  width: auto;
   pointer-events: none;
   user-select: none;
 }
@@ -311,13 +314,15 @@
   display: none;
 }
 #sync-btn {
+  --watch-band-space: 3.75rem;
+  --watch-band-overhang: -38px;
   max-width: calc(
     100vw - var(--safe-left) - var(--safe-right) - 2 * var(--gutter)
   );
-  grid-template-columns: minmax(0, var(--status-width, max-content)) 2.25rem;
+  grid-template-columns: minmax(0, var(--status-width, max-content));
+  padding-right: var(--watch-band-space);
 }
 #sync-btn > div {
-  grid-column: 1;
   overflow-wrap: anywhere;
 }
 .status-unit {
